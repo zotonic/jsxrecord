@@ -31,7 +31,8 @@ all() ->
         records,
         records_nested,
         record_defaults,
-        dates
+        dates,
+        proplist
     ].
 
 %%--------------------------------------------------------------------
@@ -63,4 +64,8 @@ record_defaults(_Config) ->
 dates(_Config) ->
     <<"\"2008-12-10T13:30:00Z\"">> = jsxrecord:encode({{2008, 12, 10}, {13, 30, 0}}),
     <<"2008-12-10T13:30:00Z">> = jsxrecord:decode(<<"\"2008-12-10T13:30:00Z\"">>),
+    ok.
+
+proplist(_Config) ->
+    <<"{\"a\":1}">> = jsxrecord:encode([ {a, 1} ]),
     ok.

@@ -128,12 +128,17 @@ expand_records(R) when is_tuple(R), is_atom(element(1, R)) ->
         {ok, Def} ->
             expand_record_1(Def, 2, R, #{ <<"_record">> => T });
         error ->
-            expand_records( tuple_to_list(R) )
+            R
     end;
 expand_records({K, V}) ->
     {expand_records(K), expand_records(V)};
 expand_records(L) when is_list(L) ->
-    lists:map( fun expand_records/1, L );
+    lists:map(
+        fun
+            ({K, V}) -> {K, expand_records(V)};
+            (V) -> expand_records(V)
+        end,
+        L);
 expand_records(M) when is_map(M) ->
     maps:map( fun(_K, V) -> expand_records(V) end, M );
 expand_records(undefined) ->
