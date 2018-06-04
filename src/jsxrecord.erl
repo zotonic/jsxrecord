@@ -29,6 +29,8 @@
     record_defs/0
 ]).
 
+-define(RECORD_TYPE, <<"_type">>).
+
 %%====================================================================
 %% API
 %%====================================================================
@@ -98,7 +100,7 @@ decode_json(B) -> reconstitute_records( jsx:decode(B, [return_maps]) ).
 
 reconstitute_records( M ) when is_map(M) ->
     M1 = maps:map( fun(_K, V) -> reconstitute_records(V) end, M ),
-    case maps:find(<<"_record">>, M1) of
+    case maps:find(?RECORD_TYPE, M1) of
         {ok, Type} ->
             case maps:find(Type, record_defs_int()) of
                 {ok, Def} ->
@@ -126,7 +128,7 @@ expand_records(R) when is_tuple(R), is_atom(element(1, R)) ->
     T = atom_to_binary(element(1, R), utf8),
     case maps:find(T, record_defs()) of
         {ok, Def} ->
-            expand_record_1(Def, 2, R, #{ <<"_record">> => T });
+            expand_record_1(Def, 2, R, #{ ?RECORD_TYPE => T });
         error ->
             R
     end;

@@ -53,12 +53,12 @@ records(_Config) ->
 
 records_nested(_Config) ->
     #test{ a = #test{} } = jsxrecord:decode( jsxrecord:encode( #test{ a = #test{} } ) ),
-    <<"{\"a\":{\"_record\":\"test\",\"a\":1,\"b\":2,\"c\":null}}">> = jsxrecord:encode(#{ a => #test{} }),
+    <<"{\"a\":{\"_type\":\"test\",\"a\":1,\"b\":2,\"c\":null}}">> = jsxrecord:encode(#{ a => #test{} }),
     #{ <<"a">> := #test{} } = jsxrecord:decode( jsxrecord:encode(#{ a => #test{} }) ),
     ok.
 
 record_defaults(_Config) ->
-    #test{ a = 1, b = 2, c = undefined } = jsxrecord:decode( <<"{\"_record\":\"test\"}">> ),
+    #test{ a = 1, b = 2, c = undefined } = jsxrecord:decode( <<"{\"_type\":\"test\"}">> ),
     ok.
 
 dates(_Config) ->
