@@ -132,6 +132,8 @@ expand_records(R) when is_tuple(R), is_atom(element(1, R)) ->
         error ->
             R
     end;
+expand_records({K, V}) when is_number(K) ->
+    [ K, V ];
 expand_records({K, V}) ->
     {expand_records(K), expand_records(V)};
 expand_records(L) when is_list(L) ->
