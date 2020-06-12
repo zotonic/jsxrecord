@@ -132,6 +132,20 @@ expand_records(R) when is_tuple(R), is_atom(element(1, R)) ->
         error ->
             R
     end;
+expand_records({MegaSecs, Secs, MicroSecs}=Timestamp) when is_integer(MegaSecs) andalso is_integer(Secs) andalso is_integer(MicroSecs) ->
+    %% erlang timestamp tuple
+    MilliSecs = MicroSecs div 1000, 
+    {{Year, Month, Day}, {Hour, Min, Sec}} = calendar:now_to_datetime(Timestamp),
+    unicode:characters_to_binary(io_lib:format("~4.10.0B-~2.10.0B-~2.10.0BT~2.10.0B:~2.10.0B:~2.10.0B.~3.10.0BZ",
+                                               [Year, Month, Day, Hour, Min, Sec, MilliSecs]));
+
+expand_records({{Year,Month,Day},{Hour,Minute,Second}}) when is_integer(Year) andalso is_integer(Month) andalso is_integer(Second) andalso
+                                           is_integer(Hour) andalso is_integer(Minute) andalso is_integer(Second) ->
+    %% erlang datetime tuple
+    unicode:characters_to_binary(io_lib:format(
+                                   "~4.10.0B-~2.10.0B-~2.10.0BT~2.10.0B:~2.10.0B:~2.10.0BZ",
+                                   [Year, Month, Day, Hour, Minute, Second]));
+
 expand_records({K, V}) when is_number(K) ->
     [ K, V ];
 expand_records({K, V}) ->
