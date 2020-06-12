@@ -31,6 +31,8 @@
 
 -define(RECORD_TYPE, <<"_type">>).
 
+-define(IS_NUMBER(C), C >= $0, C =< $9).
+
 %%====================================================================
 %% API
 %%====================================================================
@@ -121,8 +123,33 @@ reconstitute_records( L ) when is_list(L) ->
     [ reconstitute_records(X) || X <- L ];
 reconstitute_records( null ) ->
     undefined;
+reconstitute_records( <<Y1, Y2, Y3, Y4, $-, M1, M2, $-, D1, D2, $T, H1, H2, $:, Min1, Min2, $:, S1, S2, $., Mil1, Mil2, Mil3, $Z>> )
+  when ?IS_NUMBER(Y1), ?IS_NUMBER(Y2), ?IS_NUMBER(Y3), ?IS_NUMBER(Y4), ?IS_NUMBER(M1), ?IS_NUMBER(M2), ?IS_NUMBER(D1), ?IS_NUMBER(D2),
+       ?IS_NUMBER(H1), ?IS_NUMBER(H2), ?IS_NUMBER(Min1), ?IS_NUMBER(Min2), ?IS_NUMBER(S1), ?IS_NUMBER(S2),
+       ?IS_NUMBER(Mil1), ?IS_NUMBER(Mil2), ?IS_NUMBER(Mil3) ->
+    DateTime = {{chars_to_integer(Y1, Y2, Y3, Y4), chars_to_integer(M1, M2), chars_to_integer(D1, D2)},
+                {chars_to_integer(H1, H2), chars_to_integer(Min1, Min2), chars_to_integer(S1, S2)}},
+    MilliSeconds = chars_to_integer(Mil1, Mil2, Mil3),
+    Seconds = calendar:datetime_to_gregorian_seconds(DateTime) - 62167219200,
+    %% 62167219200 == calendar:datetime_to_gregorian_seconds({{1970, 1, 1}, {0, 0, 0}})
+    {Seconds div 1000000, Seconds rem 1000000, MilliSeconds * 1000};
+reconstitute_records( <<Y1, Y2, Y3, Y4, $-, M1, M2, $-, D1, D2, $T, H1, H2, $:, Min1, Min2, $:, S1, S2, $Z>> )
+  when ?IS_NUMBER(Y1), ?IS_NUMBER(Y2), ?IS_NUMBER(Y3), ?IS_NUMBER(Y4), ?IS_NUMBER(M1), ?IS_NUMBER(M2), ?IS_NUMBER(D1), ?IS_NUMBER(D2),
+       ?IS_NUMBER(H1), ?IS_NUMBER(H2), ?IS_NUMBER(Min1), ?IS_NUMBER(Min2), ?IS_NUMBER(S1), ?IS_NUMBER(S2) ->
+    {{chars_to_integer(Y1, Y2, Y3, Y4), chars_to_integer(M1, M2), chars_to_integer(D1, D2)},
+     {chars_to_integer(H1, H2), chars_to_integer(Min1, Min2), chars_to_integer(S1, S2)}};
 reconstitute_records( T ) ->
     T.
+
+chars_to_integer(N1, N2) ->
+    ((N1 - $0) * 10) + (N2 - $0).
+
+chars_to_integer(N1, N2, N3) ->
+    ((N1 - $0) * 100) + ((N2 - $0) * 10) + (N3 - $0).
+
+chars_to_integer(N1, N2, N3, N4) ->
+    ((N1 - $0) * 1000) + ((N2 - $0) * 100) + ((N3 - $0) * 10) + (N4 - $0).
+
 
 expand_records(R) when is_tuple(R), is_atom(element(1, R)) ->
     T = atom_to_binary(element(1, R), utf8),
