@@ -141,15 +141,6 @@ reconstitute_records( <<Y1, Y2, Y3, Y4, $-, M1, M2, $-, D1, D2, $T, H1, H2, $:, 
 reconstitute_records( T ) ->
     T.
 
-chars_to_integer(N1, N2) ->
-    ((N1 - $0) * 10) + (N2 - $0).
-
-chars_to_integer(N1, N2, N3) ->
-    ((N1 - $0) * 100) + ((N2 - $0) * 10) + (N3 - $0).
-
-chars_to_integer(N1, N2, N3, N4) ->
-    ((N1 - $0) * 1000) + ((N2 - $0) * 100) + ((N3 - $0) * 10) + (N4 - $0).
-
 
 expand_records(R) when is_tuple(R), is_atom(element(1, R)) ->
     T = atom_to_binary(element(1, R), utf8),
@@ -160,7 +151,6 @@ expand_records(R) when is_tuple(R), is_atom(element(1, R)) ->
             R
     end;
 expand_records({MegaSecs, Secs, MicroSecs}=Timestamp) when is_integer(MegaSecs) andalso is_integer(Secs) andalso is_integer(MicroSecs) ->
-    %% erlang timestamp tuple
     MilliSecs = MicroSecs div 1000, 
     {{Year, Month, Day}, {Hour, Min, Sec}} = calendar:now_to_datetime(Timestamp),
     unicode:characters_to_binary(io_lib:format("~4.10.0B-~2.10.0B-~2.10.0BT~2.10.0B:~2.10.0B:~2.10.0B.~3.10.0BZ",
@@ -168,7 +158,6 @@ expand_records({MegaSecs, Secs, MicroSecs}=Timestamp) when is_integer(MegaSecs) 
 
 expand_records({{Year,Month,Day},{Hour,Minute,Second}}) when is_integer(Year) andalso is_integer(Month) andalso is_integer(Second) andalso
                                            is_integer(Hour) andalso is_integer(Minute) andalso is_integer(Second) ->
-    %% erlang datetime tuple
     unicode:characters_to_binary(io_lib:format(
                                    "~4.10.0B-~2.10.0B-~2.10.0BT~2.10.0B:~2.10.0B:~2.10.0BZ",
                                    [Year, Month, Day, Hour, Minute, Second]));
@@ -264,3 +253,13 @@ to_field_name({record_field, _Line, {atom, _, FieldName}}) ->
     {FieldName, undefined};
 to_field_name({record_field, _Line, {atom, _, FieldName}, InitExpr}) ->
     {FieldName, erl_syntax:concrete(InitExpr)}.
+
+chars_to_integer(N1, N2) ->
+    ((N1 - $0) * 10) + (N2 - $0).
+
+chars_to_integer(N1, N2, N3) ->
+    ((N1 - $0) * 100) + ((N2 - $0) * 10) + (N3 - $0).
+
+chars_to_integer(N1, N2, N3, N4) ->
+    ((N1 - $0) * 1000) + ((N2 - $0) * 100) + ((N3 - $0) * 10) + (N4 - $0).
+
