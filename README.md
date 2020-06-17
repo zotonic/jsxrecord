@@ -56,7 +56,25 @@ Decoding returns the `#test{}`:
 Defaults are automatically added for fields missing in the JSON:
 
     #test{ a = 1, b = 2, c = undefined } = jsxrecord:decode(<<"{\"_record\":\"test\"}">>).
+    
+### Encoding and decoding datetime and timestamp tuples
 
+Datetime tuples are assumed to be in UTC, and are converted into an ISO8601 string:
+
+    <<"\"2008-12-10T13:30:00Z\"">> = jsxrecord:encode({{2008, 12, 10}, {13, 30, 0}})
+    
+They are converted back into a datetime tuple:
+    
+    {{2008, 12, 10}, {13, 30, 0}} = jsxrecord:decode(<<"\"2008-12-10T13:30:00Z\"">>)
+    
+Erlang timestamp tuples are also converted into an ISO8601 string, but with added precision:
+
+    <<"\"2020-06-12T14:00:11.571Z\"">> = jsxrecord:encode({1591,970411,571321})
+    
+A little bit of precision is lost when converting it back to a timestamp tuple:
+
+    {1591,970411,571000} = jsxrecord:decode(<<"\"2020-06-12T14:00:11.571Z\"">>)
+    
 
 ## Configuration
 

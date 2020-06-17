@@ -32,6 +32,7 @@ all() ->
         records_nested,
         record_defaults,
         dates,
+        times,
         proplist
     ].
 
@@ -63,9 +64,15 @@ record_defaults(_Config) ->
 
 dates(_Config) ->
     <<"\"2008-12-10T13:30:00Z\"">> = jsxrecord:encode({{2008, 12, 10}, {13, 30, 0}}),
-    <<"2008-12-10T13:30:00Z">> = jsxrecord:decode(<<"\"2008-12-10T13:30:00Z\"">>),
+    {{2008, 12, 10}, {13, 30, 0}} = jsxrecord:decode(<<"\"2008-12-10T13:30:00Z\"">>),
     ok.
 
+times(_Config) ->
+    <<"\"2020-06-12T14:00:11.571Z\"">> = jsxrecord:encode({1591,970411,571321}),
+    % We loose a little bit of precision, but that is ok.
+    {1591,970411,571000} = jsxrecord:decode( <<"\"2020-06-12T14:00:11.571Z\"">> ),
+    ok.
+    
 proplist(_Config) ->
     <<"{\"a\":1}">> = jsxrecord:encode([ {a, 1} ]),
     ok.
