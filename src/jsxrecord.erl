@@ -123,21 +123,29 @@ reconstitute_records( L ) when is_list(L) ->
     [ reconstitute_records(X) || X <- L ];
 reconstitute_records( null ) ->
     undefined;
-reconstitute_records( <<Y1, Y2, Y3, Y4, $-, M1, M2, $-, D1, D2, $T, H1, H2, $:, Min1, Min2, $:, S1, S2, $., Mil1, Mil2, Mil3, $Z>> )
-  when ?IS_NUMBER(Y1), ?IS_NUMBER(Y2), ?IS_NUMBER(Y3), ?IS_NUMBER(Y4), ?IS_NUMBER(M1), ?IS_NUMBER(M2), ?IS_NUMBER(D1), ?IS_NUMBER(D2),
-       ?IS_NUMBER(H1), ?IS_NUMBER(H2), ?IS_NUMBER(Min1), ?IS_NUMBER(Min2), ?IS_NUMBER(S1), ?IS_NUMBER(S2),
-       ?IS_NUMBER(Mil1), ?IS_NUMBER(Mil2), ?IS_NUMBER(Mil3) ->
-    DateTime = {{chars_to_integer(Y1, Y2, Y3, Y4), chars_to_integer(M1, M2), chars_to_integer(D1, D2)},
-                {chars_to_integer(H1, H2), chars_to_integer(Min1, Min2), chars_to_integer(S1, S2)}},
-    MilliSeconds = chars_to_integer(Mil1, Mil2, Mil3),
+reconstitute_records( <<Y4, Y3, Y2, Y1, $-, M2, M1, $-, D2, D1, $T, H2, H1, $:, Min2, Min1, $:, S2, S1, $., Mil3, Mil2, Mil1, $Z>> )
+  when ?IS_NUMBER(Y4), ?IS_NUMBER(Y3), ?IS_NUMBER(Y2), ?IS_NUMBER(Y1),
+       ?IS_NUMBER(M2), ?IS_NUMBER(M1),
+       ?IS_NUMBER(D2), ?IS_NUMBER(D1),
+       ?IS_NUMBER(H2), ?IS_NUMBER(H1),
+       ?IS_NUMBER(Min2), ?IS_NUMBER(Min1),
+       ?IS_NUMBER(S2), ?IS_NUMBER(S1),
+       ?IS_NUMBER(Mil3), ?IS_NUMBER(Mil2), ?IS_NUMBER(Mil1) ->
+    DateTime = {{chars_to_integer(Y4, Y3, Y2, Y1), chars_to_integer(M2, M1), chars_to_integer(D2, D1)},
+                {chars_to_integer(H2, H1), chars_to_integer(Min2, Min1), chars_to_integer(S2, S1)}},
+    MilliSeconds = chars_to_integer(Mil3, Mil2, Mil1),
     Seconds = calendar:datetime_to_gregorian_seconds(DateTime) - 62167219200,
     %% 62167219200 == calendar:datetime_to_gregorian_seconds({{1970, 1, 1}, {0, 0, 0}})
     {Seconds div 1000000, Seconds rem 1000000, MilliSeconds * 1000};
-reconstitute_records( <<Y1, Y2, Y3, Y4, $-, M1, M2, $-, D1, D2, $T, H1, H2, $:, Min1, Min2, $:, S1, S2, $Z>> )
-  when ?IS_NUMBER(Y1), ?IS_NUMBER(Y2), ?IS_NUMBER(Y3), ?IS_NUMBER(Y4), ?IS_NUMBER(M1), ?IS_NUMBER(M2), ?IS_NUMBER(D1), ?IS_NUMBER(D2),
-       ?IS_NUMBER(H1), ?IS_NUMBER(H2), ?IS_NUMBER(Min1), ?IS_NUMBER(Min2), ?IS_NUMBER(S1), ?IS_NUMBER(S2) ->
-    {{chars_to_integer(Y1, Y2, Y3, Y4), chars_to_integer(M1, M2), chars_to_integer(D1, D2)},
-     {chars_to_integer(H1, H2), chars_to_integer(Min1, Min2), chars_to_integer(S1, S2)}};
+reconstitute_records( <<Y4, Y3, Y2, Y1, $-, M2, M1, $-, D2, D1, $T, H2, H1, $:, Min2, Min1, $:, S2, S1, $Z>> )
+  when ?IS_NUMBER(Y4), ?IS_NUMBER(Y3), ?IS_NUMBER(Y2), ?IS_NUMBER(Y1),
+       ?IS_NUMBER(M2), ?IS_NUMBER(M1),
+       ?IS_NUMBER(D2), ?IS_NUMBER(D1),
+       ?IS_NUMBER(H2), ?IS_NUMBER(H1),
+       ?IS_NUMBER(Min2), ?IS_NUMBER(Min1),
+       ?IS_NUMBER(S2), ?IS_NUMBER(S1) ->
+    {{chars_to_integer(Y4, Y3, Y2, Y1), chars_to_integer(M2, M1), chars_to_integer(D2, D1)},
+     {chars_to_integer(H2, H1), chars_to_integer(Min2, Min1), chars_to_integer(S2, S1)}};
 reconstitute_records( T ) ->
     T.
 
@@ -254,12 +262,12 @@ to_field_name({record_field, _Line, {atom, _, FieldName}}) ->
 to_field_name({record_field, _Line, {atom, _, FieldName}, InitExpr}) ->
     {FieldName, erl_syntax:concrete(InitExpr)}.
 
-chars_to_integer(N1, N2) ->
-    ((N1 - $0) * 10) + (N2 - $0).
+chars_to_integer(N2, N1) ->
+    ((N2 - $0) * 10) + (N1 - $0).
 
-chars_to_integer(N1, N2, N3) ->
-    ((N1 - $0) * 100) + ((N2 - $0) * 10) + (N3 - $0).
+chars_to_integer(N3, N2, N1) ->
+    ((N3 - $0) * 100) + ((N2 - $0) * 10) + (N1 - $0).
 
-chars_to_integer(N1, N2, N3, N4) ->
-    ((N1 - $0) * 1000) + ((N2 - $0) * 100) + ((N3 - $0) * 10) + (N4 - $0).
+chars_to_integer(N4, N3, N2, N1) ->
+    ((N4 - $0) * 1000) + ((N3 - $0) * 100) + ((N2 - $0) * 10) + (N1 - $0).
 
