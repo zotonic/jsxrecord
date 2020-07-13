@@ -1,19 +1,10 @@
 language: erlang
 otp_release:
+  - 23.0
+  - 22.3
+  - 21.3
   - 20.3
   - 19.0
-jobs:
-  include:
-    - stage: deploy
-      otp_release: 20.3
-      script: skip
-      deploy:
-        provider: script
-        script: ./hex.sh
-        skip_cleanup: true
-        on:
-          tags: true
-          all_branches: true
 script: make clean test
 sudo: false
 branches:
