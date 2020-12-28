@@ -41,7 +41,9 @@
 encode(Source) ->
     encode_json(Source).
 
--spec decode( binary() ) -> term().
+-spec decode( binary() | undefined ) -> term().
+decode(undefined) ->
+    undefined;
 decode(Bin) when is_binary(Bin) ->
     decode_json(Bin).
 
@@ -69,8 +71,10 @@ load_records(Modules) ->
 %% @doc Load all record definitions.
 -spec record_defs_int() -> map().
 record_defs_int() ->
-    try jsxrecord_defs:defs()
-    catch _:_ -> #{}
+    try
+        erlang:apply(jsxrecord_defs, defs, [])
+    catch _:_ ->
+        #{}
     end.
 
 do_load_records(Modules, CurrRecordDefs) ->
@@ -92,7 +96,6 @@ encode_json(false) -> <<"false">>;
 encode_json({struct, _} = MochiJSON) -> encode_json( mochijson_to_map(MochiJSON) );
 encode_json(Term) -> jsx:encode( expand_records( Term ) ).
 
-decode_json(undefined) -> undefined;
 decode_json(<<>>) -> undefined;
 decode_json(<<"null">>) -> undefined;
 decode_json(<<"true">>) -> true;
