@@ -1,4 +1,4 @@
-[![Build Status](https://travis-ci.org/zotonic/jsxrecord.svg?branch=master)](https://travis-ci.org/zotonic/jsxrecord)
+![Test](https://github.com/zotonic/jsxrecord/workflows/Test/badge.svg)
 
 # JSON encoding with records and 'null'/'undefined' mapping
 
