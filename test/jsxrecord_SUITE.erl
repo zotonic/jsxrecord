@@ -10,6 +10,10 @@
     c
 }).
 
+-record(trans, {
+    tr = []
+}).
+
 %%--------------------------------------------------------------------
 %% COMMON TEST CALLBACK FUNCTIONS
 %%--------------------------------------------------------------------
@@ -33,7 +37,8 @@ all() ->
         record_defaults,
         dates,
         times,
-        proplist
+        proplist,
+        record_proplist
     ].
 
 %%--------------------------------------------------------------------
@@ -72,7 +77,13 @@ times(_Config) ->
     % We loose a little bit of precision, but that is ok.
     {1591,970411,571000} = jsxrecord:decode( <<"\"2020-06-12T14:00:11.571Z\"">> ),
     ok.
-    
+
 proplist(_Config) ->
     <<"{\"a\":1}">> = jsxrecord:encode([ {a, 1} ]),
+    ok.
+
+record_proplist(_Config) ->
+    Tr = #trans{ tr = [ {en, <<"hello">>} ]},
+    Json = jsxrecord:encode(Tr),
+    Tr = jsxrecord:decode(Json),
     ok.

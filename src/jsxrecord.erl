@@ -111,7 +111,13 @@ reconstitute_records( M ) when is_map(M) ->
                 {ok, Def} ->
                     Rec = lists:foldl(
                         fun({F, Default}, Acc) ->
-                            [ maps:get(F, M1, Default) | Acc ]
+                            V1 = case maps:get(F, M1, Default) of
+                                V when is_map(V), is_list(Default) ->
+                                    make_proplist(V);
+                                V ->
+                                    V
+                            end,
+                            [ V1 | Acc ]
                         end,
                         [ binary_to_atom(Type, utf8) ],
                         Def),
@@ -152,6 +158,20 @@ reconstitute_records( <<Y4, Y3, Y2, Y1, $-, M2, M1, $-, D2, D1, $T, H2, H1, $:, 
 reconstitute_records( T ) ->
     T.
 
+make_proplist(Map) ->
+    L = maps:to_list(Map),
+    lists:map(
+        fun
+            ({K,V}) when is_binary(K) ->
+                try
+                    {binary_to_existing_atom(K, utf8), V}
+                catch
+                    _:_ -> {K, V}
+                end;
+            (KV) ->
+                KV
+        end,
+        L).
 
 expand_records(R) when is_tuple(R), is_atom(element(1, R)) ->
     T = atom_to_binary(element(1, R), utf8),
