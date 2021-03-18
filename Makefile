@@ -24,6 +24,9 @@ xref: $(REBAR)
 clean: $(REBAR)
 	$(REBAR) clean
 
+edoc: $(REBAR)
+	$(REBAR) edoc
+
 ./rebar3:
 	$(ERL) -noshell -s inets -s ssl \
 	  -eval '{ok, saved_to_file} = httpc:request(get, {"$(REBAR_URL)", []}, [], [{stream, "./rebar3"}])' \
