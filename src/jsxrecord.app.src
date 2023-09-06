@@ -2,7 +2,7 @@
     {description, "JSX wrapper to handle records and 'undefined'"},
     {vsn, "git"},
     {registered, []},
-    {applications, [ kernel, stdlib, erl_syntax, jsx ]},
+    {applications, [ kernel, stdlib, syntax_tools, jsx ]},
     {env, [
         {record_modules, [ ]}
     ]},
