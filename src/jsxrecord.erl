@@ -1,9 +1,9 @@
 %% @author Marc Worrell <marc@worrell.nl>
-%% @copyright 2018 Marc Worrell
-
+%% @copyright 2018-2023 Marc Worrell
 %% @doc JSON with records and 'undefined'/'null' mapping. Wrapper around jsx.
+%% @end
 
-%% Copyright 2018 Marc Worrell
+%% Copyright 2018-2023 Marc Worrell
 %%
 %% Licensed under the Apache License, Version 2.0 (the "License");
 %% you may not use this file except in compliance with the License.
@@ -32,6 +32,9 @@
 -define(RECORD_TYPE, <<"_type">>).
 
 -define(IS_NUMBER(C), C >= $0, C =< $9).
+
+
+-include_lib("kernel/include/logger.hrl").
 
 %%====================================================================
 %% API
@@ -93,8 +96,13 @@ encode_json(undefined) -> <<"null">>;
 encode_json(null) -> <<"null">>;
 encode_json(true) -> <<"true">>;
 encode_json(false) -> <<"false">>;
-encode_json({struct, _} = MochiJSON) -> encode_json( mochijson_to_map(MochiJSON) );
-encode_json(Term) -> jsx:encode( expand_records( Term ) ).
+encode_json({struct, _} = MochiJSON) ->
+    encode_json( mochijson_to_map(MochiJSON) );
+encode_json(Term) ->
+    Options = [
+        {error_handler, fun jsx_error/3}
+    ],
+    jsx:encode(expand_records(Term), Options).
 
 decode_json(<<>>) -> undefined;
 decode_json(<<"null">>) -> undefined;
@@ -102,6 +110,18 @@ decode_json(<<"true">>) -> true;
 decode_json(<<"false">>) -> false;
 decode_json(B) -> reconstitute_records( jsx:decode(B, [return_maps]) ).
 
+jsx_error([T|Terms], {parser, State, Handler, Stack}, Config) ->
+    ?LOG_ERROR(#{
+        in => jsxrecord,
+        text => <<"Error mapping value to JSON">>,
+        result => error,
+        reason => json_token,
+        token => T
+    }),
+    Config1 = jsx_config:parse_config(Config),
+    jsx_parser:resume([null|Terms], State, Handler, Stack, Config1);
+jsx_error(_Terms, _Error, _Config) ->
+    erlang:error(badarg).
 
 reconstitute_records( M ) when is_map(M) ->
     M1 = maps:map( fun(_K, V) -> reconstitute_records(V) end, M ),
