@@ -2,12 +2,11 @@
     {description, "JSX wrapper to handle records and 'undefined'"},
     {vsn, "git"},
     {registered, []},
-    {applications, [ kernel, stdlib, jsx ]},
+    {applications, [ kernel, stdlib, syntax_tools, compiler, jsx ]},
     {env, [
         {record_modules, [ ]}
     ]},
     {modules, []},
-    {maintainers, ["Zotonic Team"]},
-    {licenses, ["Apache 2.0"]},
+    {licenses, ["Apache-2.0"]},
     {links, [ {"GitHub","https://github.com/zotonic/jsxrecord"} ]}
 ]}.

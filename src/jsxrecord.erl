@@ -1,9 +1,9 @@
 %% @author Marc Worrell <marc@worrell.nl>
-%% @copyright 2018 Marc Worrell
-
+%% @copyright 2018-2023 Marc Worrell
 %% @doc JSON with records and 'undefined'/'null' mapping. Wrapper around jsx.
+%% @end
 
-%% Copyright 2018 Marc Worrell
+%% Copyright 2018-2023 Marc Worrell
 %%
 %% Licensed under the Apache License, Version 2.0 (the "License");
 %% you may not use this file except in compliance with the License.
@@ -32,6 +32,9 @@
 -define(RECORD_TYPE, <<"_type">>).
 
 -define(IS_NUMBER(C), C >= $0, C =< $9).
+
+
+-include_lib("kernel/include/logger.hrl").
 
 %%====================================================================
 %% API
@@ -93,14 +96,32 @@ encode_json(undefined) -> <<"null">>;
 encode_json(null) -> <<"null">>;
 encode_json(true) -> <<"true">>;
 encode_json(false) -> <<"false">>;
-encode_json({struct, _} = MochiJSON) -> encode_json( mochijson_to_map(MochiJSON) );
-encode_json(Term) -> jsx:encode( expand_records( Term ) ).
+encode_json({struct, _} = MochiJSON) ->
+    encode_json( mochijson_to_map(MochiJSON) );
+encode_json(Term) ->
+    Options = [
+        {error_handler, fun jsx_error/3}
+    ],
+    jsx:encode(expand_records(Term), Options).
 
 decode_json(<<>>) -> undefined;
 decode_json(<<"null">>) -> undefined;
 decode_json(<<"true">>) -> true;
 decode_json(<<"false">>) -> false;
 decode_json(B) -> reconstitute_records( jsx:decode(B, [return_maps]) ).
+
+jsx_error([T|Terms], {parser, State, Handler, Stack}, Config) ->
+    ?LOG_ERROR(#{
+        in => jsxrecord,
+        text => <<"Error mapping value to JSON">>,
+        result => error,
+        reason => json_token,
+        token => T
+    }),
+    Config1 = jsx_config:parse_config(Config),
+    jsx_parser:resume([null|Terms], State, Handler, Stack, Config1);
+jsx_error(_Terms, _Error, _Config) ->
+    erlang:error(badarg).
 
 
 reconstitute_records( M ) when is_map(M) ->
@@ -182,17 +203,22 @@ expand_records(R) when is_tuple(R), is_atom(element(1, R)) ->
             R
     end;
 expand_records({MegaSecs, Secs, MicroSecs}=Timestamp) when is_integer(MegaSecs) andalso is_integer(Secs) andalso is_integer(MicroSecs) ->
-    MilliSecs = MicroSecs div 1000, 
+    % Timestamp, map to date in UTC
+    MilliSecs = MicroSecs div 1000,
     {{Year, Month, Day}, {Hour, Min, Sec}} = calendar:now_to_datetime(Timestamp),
     unicode:characters_to_binary(io_lib:format("~4.10.0B-~2.10.0B-~2.10.0BT~2.10.0B:~2.10.0B:~2.10.0B.~3.10.0BZ",
                                                [Year, Month, Day, Hour, Min, Sec, MilliSecs]));
 
 expand_records({{Year,Month,Day},{Hour,Minute,Second}}) when is_integer(Year) andalso is_integer(Month) andalso is_integer(Second) andalso
                                            is_integer(Hour) andalso is_integer(Minute) andalso is_integer(Second) ->
+    % Date tuple, assume it to be in UTC
     unicode:characters_to_binary(io_lib:format(
                                    "~4.10.0B-~2.10.0B-~2.10.0BT~2.10.0B:~2.10.0B:~2.10.0BZ",
                                    [Year, Month, Day, Hour, Minute, Second]));
 
+expand_records({A, B, Params} = Mime) when is_binary(A), is_binary(B), is_list(Params) ->
+    % Assume to be a MIME content type
+    format_content_type(Mime);
 expand_records({K, V}) when is_number(K) ->
     [ K, V ];
 expand_records({K, V}) ->
@@ -224,6 +250,12 @@ mochijson_to_map({K, V}) ->
     {K, mochijson_to_map(V)};
 mochijson_to_map(V) ->
     V.
+
+format_content_type({T1, T2, []}) ->
+    <<T1/binary, $/, T2/binary>>;
+format_content_type({T1, T2, Params}) ->
+    ParamsBin = [ [$;, Param, $=, Value] || {Param,Value} <- Params ],
+    iolist_to_binary([T1, $/, T2, ParamsBin]).
 
 %% @doc Compile the record defs to a module, for effictient caching of all definitions
 -spec compile_module( map() ) -> ok.
