@@ -203,17 +203,22 @@ expand_records(R) when is_tuple(R), is_atom(element(1, R)) ->
             R
     end;
 expand_records({MegaSecs, Secs, MicroSecs}=Timestamp) when is_integer(MegaSecs) andalso is_integer(Secs) andalso is_integer(MicroSecs) ->
-    MilliSecs = MicroSecs div 1000, 
+    % Timestamp, map to date in UTC
+    MilliSecs = MicroSecs div 1000,
     {{Year, Month, Day}, {Hour, Min, Sec}} = calendar:now_to_datetime(Timestamp),
     unicode:characters_to_binary(io_lib:format("~4.10.0B-~2.10.0B-~2.10.0BT~2.10.0B:~2.10.0B:~2.10.0B.~3.10.0BZ",
                                                [Year, Month, Day, Hour, Min, Sec, MilliSecs]));
 
 expand_records({{Year,Month,Day},{Hour,Minute,Second}}) when is_integer(Year) andalso is_integer(Month) andalso is_integer(Second) andalso
                                            is_integer(Hour) andalso is_integer(Minute) andalso is_integer(Second) ->
+    % Date tuple, assume it to be in UTC
     unicode:characters_to_binary(io_lib:format(
                                    "~4.10.0B-~2.10.0B-~2.10.0BT~2.10.0B:~2.10.0B:~2.10.0BZ",
                                    [Year, Month, Day, Hour, Minute, Second]));
 
+expand_records({A, B, Params} = Mime) when is_binary(A), is_binary(B), is_list(Params) ->
+    % Assume to be a MIME content type
+    format_content_type(Mime);
 expand_records({K, V}) when is_number(K) ->
     [ K, V ];
 expand_records({K, V}) ->
@@ -229,9 +234,6 @@ expand_records(M) when is_map(M) ->
     maps:map( fun(_K, V) -> expand_records(V) end, M );
 expand_records(undefined) ->
     null;
-expand_records({A, B, Params} = Mime) when is_binary(A), is_binary(B), is_list(Params) ->
-    % Assume to be a MIME content type
-    format_content_type(Mime);
 expand_records(X) ->
     X.
 
@@ -249,9 +251,6 @@ mochijson_to_map({K, V}) ->
 mochijson_to_map(V) ->
     V.
 
--spec format_content_type(MediaType) -> Result when
-    MediaType :: cow_http_hd:media_type(),
-    Result :: binary().
 format_content_type({T1, T2, []}) ->
     <<T1/binary, $/, T2/binary>>;
 format_content_type({T1, T2, Params}) ->
