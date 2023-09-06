@@ -123,6 +123,7 @@ jsx_error([T|Terms], {parser, State, Handler, Stack}, Config) ->
 jsx_error(_Terms, _Error, _Config) ->
     erlang:error(badarg).
 
+
 reconstitute_records( M ) when is_map(M) ->
     M1 = maps:map( fun(_K, V) -> reconstitute_records(V) end, M ),
     case maps:find(?RECORD_TYPE, M1) of
@@ -228,6 +229,9 @@ expand_records(M) when is_map(M) ->
     maps:map( fun(_K, V) -> expand_records(V) end, M );
 expand_records(undefined) ->
     null;
+expand_records({A, B, Params} = Mime) when is_binary(A), is_binary(B), is_list(Params) ->
+    % Assume to be a MIME content type
+    format_content_type(Mime);
 expand_records(X) ->
     X.
 
@@ -244,6 +248,15 @@ mochijson_to_map({K, V}) ->
     {K, mochijson_to_map(V)};
 mochijson_to_map(V) ->
     V.
+
+-spec format_content_type(MediaType) -> Result when
+    MediaType :: cow_http_hd:media_type(),
+    Result :: binary().
+format_content_type({T1, T2, []}) ->
+    <<T1/binary, $/, T2/binary>>;
+format_content_type({T1, T2, Params}) ->
+    ParamsBin = [ [$;, Param, $=, Value] || {Param,Value} <- Params ],
+    iolist_to_binary([T1, $/, T2, ParamsBin]).
 
 %% @doc Compile the record defs to a module, for effictient caching of all definitions
 -spec compile_module( map() ) -> ok.
