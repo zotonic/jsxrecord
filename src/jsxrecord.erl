@@ -226,7 +226,7 @@ expand_records({K, V}) ->
 expand_records(L) when is_list(L) ->
     lists:map(
         fun
-            ({K, V}) -> {K, expand_records(V)};
+            ({K, V}) when is_binary(K) -> {K, expand_records(V)};
             (V) -> expand_records(V)
         end,
         L);
