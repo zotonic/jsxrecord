@@ -1,0 +1,223 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta http-equiv="x-ua-compatible" content="ie=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="generator" content="ExDoc v0.30.5">
+    <meta name="project" content="jsxrecord v1.3.1+build.33.ref9ae9fdf">
+
+    <title>README — jsxrecord v1.3.1+build.33.ref9ae9fdf</title>
+    <link rel="stylesheet" href="dist/html-erlang-6R3HDDY5.css" />
+
+
+    <script src="dist/handlebars.runtime-NWIB6V2M.js"></script>
+    <script src="dist/handlebars.templates-NBND3S2D.js"></script>
+    <script src="dist/sidebar_items-00B37C1C.js"></script>
+
+      <script src="docs_config.js"></script>
+
+    <script async src="dist/html-B3DGGEY7.js"></script>
+
+
+  </head>
+  <body data-type="extras" class="page-extra">
+    <script>
+
+      try {
+        var settings = JSON.parse(localStorage.getItem('ex_doc:settings') || '{}');
+
+        if (settings.theme === 'dark' ||
+           ((settings.theme === 'system' || settings.theme == null) &&
+             window.matchMedia('(prefers-color-scheme: dark)').matches)
+           ) {
+          document.body.classList.add('dark')
+        }
+      } catch (error) { }
+    </script>
+
+<div class="main">
+
+<button class="sidebar-button sidebar-toggle" aria-label="toggle sidebar">
+  <i class="ri-menu-line ri-lg" title="Collapse/expand sidebar"></i>
+</button>
+
+<section class="sidebar">
+  <form class="sidebar-search" action="search.html">
+    <button type="submit" class="search-button" aria-label="Submit Search">
+      <i class="ri-search-2-line" aria-hidden="true" title="Submit search"></i>
+    </button>
+    <button type="button" tabindex="-1" class="search-close-button" aria-label="Cancel Search">
+      <i class="ri-close-line ri-lg" aria-hidden="true" title="Cancel search"></i>
+    </button>
+    <label class="search-label">
+      <p class="sr-only">Search</p>
+      <input name="q" type="text" class="search-input" placeholder="Search..." aria-label="Input your search terms" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false" />
+    </label>
+  </form>
+
+  <div class="autocomplete">
+    <div class="autocomplete-results">
+    </div>
+  </div>
+
+  <div class="sidebar-header">
+
+    <div class="sidebar-projectDetails">
+      <a href="readme.html" class="sidebar-projectName" translate="no">
+jsxrecord
+      </a>
+      <div class="sidebar-projectVersion" translate="no">
+        v1.3.1+build.33.ref9ae9fdf
+      </div>
+    </div>
+    <ul class="sidebar-listNav">
+      <li><a id="extras-list-link" href="#full-list">Pages</a></li>
+
+        <li><a id="modules-list-link" href="#full-list">Modules</a></li>
+
+
+    </ul>
+  </div>
+
+  <div class="gradient"></div>
+  <ul id="full-list"></ul>
+</section>
+
+<section class="content">
+  <output role="status" id="toast"></output>
+  <div class="content-outer">
+    <div id="content" class="content-inner">
+
+<h1>
+<button class="icon-action display-settings">
+  <i class="ri-settings-3-line"></i>
+  <span class="sr-only">Settings</span>
+</button>
+
+
+    <a href="https://github.com/zotonic/jsxrecord/blob/v1.3.1+build.33.ref9ae9fdf/README.md#L1" title="View Source" class="icon-action" rel="help">
+      <i class="ri-code-s-slash-line" aria-hidden="true"></i>
+      <span class="sr-only">View Source</span>
+    </a>
+
+
+  <span>README</span>
+</h1>
+
+<p><img src="https://github.com/zotonic/jsxrecord/workflows/Test/badge.svg" alt="Test"/></p><h1>JSON encoding with records and 'null'/'undefined' mapping</h1><p>This is a wrapper around <code class="inline">jsx</code> to handle encoding and decoding of Erlang records.</p><h2 id="json-null-handling" class="section-heading">
+  <a href="#json-null-handling">
+    <i class="ri-link-m" aria-hidden="true"></i>
+    JSON null handling
+  </a>
+</h2>
+<p>To ease the interop between Erlang and JSON the 'null' handling is changed:</p><pre><code class="makeup erlang" translate="no"><span class="n">Erlang</span><span class="w">    </span><span class="p">-&gt;</span><span class="w">    </span><span class="n">JSON</span><span class="w">     </span><span class="p">-&gt;</span><span class="w">     </span><span class="n">Erlang</span><span class="w">
+
+</span><span class="ss">undefined</span><span class="w">       </span><span class="ss">null</span><span class="w">            </span><span class="ss">undefined</span><span class="w">
+</span><span class="ss">null</span><span class="w">            </span><span class="ss">null</span><span class="w">            </span><span class="ss">undefined</span></code></pre><h2 id="how-to-use" class="section-heading">
+  <a href="#how-to-use">
+    <i class="ri-link-m" aria-hidden="true"></i>
+    How to use
+  </a>
+</h2>
+<p>Before records can be encoded or decoded the record definitions need to be loaded.</p><p>After the definitions are loaded then all encoding/decoding is done transparently.</p><h3 id="loading-record-definitions" class="section-heading">
+  <a href="#loading-record-definitions">
+    <i class="ri-link-m" aria-hidden="true"></i>
+    Loading record definitions
+  </a>
+</h3>
+<p>The record definitions are loaded from modules and compiled into a runtime loaded module
+containing all field names and default values.</p><p>To add record definitions from <code class="inline">mymodule</code></p><pre><code class="makeup erlang" translate="no"><span class="ss">ok</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="nc">jsxrecord</span><span class="p">:</span><span class="nf">load_records</span><span class="p" data-group-id="0912100311-1">(</span><span class="w"> </span><span class="p" data-group-id="0912100311-2">[</span><span class="w"> </span><span class="ss">mymodule</span><span class="w"> </span><span class="p" data-group-id="0912100311-2">]</span><span class="p" data-group-id="0912100311-1">)</span><span class="p">.</span></code></pre><p>To see the current record definitions:</p><pre><a href="jsxrecord.html#record_defs/0"><code>jsxrecord:record_defs/0</code></a></pre><p>This returns a map with all known record definitions.</p><h3 id="encoding-decoding-records" class="section-heading">
+  <a href="#encoding-decoding-records">
+    <i class="ri-link-m" aria-hidden="true"></i>
+    Encoding/decoding records
+  </a>
+</h3>
+<p>Let's assume the following record definition has been loaded:</p><pre><code class="makeup erlang" translate="no"><span class="p">-</span><span class="na">record</span><span class="p" data-group-id="2052013990-1">(</span><span class="ss">test</span><span class="p">,</span><span class="w"> </span><span class="p" data-group-id="2052013990-2">{</span><span class="w"> </span><span class="ss">a</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="mi">1</span><span class="p">,</span><span class="w"> </span><span class="ss">b</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="mi">2</span><span class="p">,</span><span class="w"> </span><span class="ss">c</span><span class="w"> </span><span class="p" data-group-id="2052013990-2">}</span><span class="p" data-group-id="2052013990-1">)</span><span class="p">.</span></code></pre><p>This can now be encoded with:</p><pre><code class="makeup erlang" translate="no"><span class="nc">jsxrecord</span><span class="p">:</span><span class="nf">encode</span><span class="p" data-group-id="8808147209-1">(</span><span class="w"> </span><span class="o">#</span><span class="ss">test</span><span class="p" data-group-id="8808147209-2">{</span><span class="p" data-group-id="8808147209-2">}</span><span class="w"> </span><span class="p" data-group-id="8808147209-1">)</span><span class="p">.</span></code></pre><p>The resulting JSON is:</p><pre><code class="makeup erlang" translate="no"><span class="p" data-group-id="9576076037-1">{</span><span class="s">&quot;_record&quot;</span><span class="p">:</span><span class="s">&quot;test&quot;</span><span class="p">,</span><span class="s">&quot;a&quot;</span><span class="p">:</span><span class="mi">1</span><span class="p">,</span><span class="s">&quot;b&quot;</span><span class="p">:</span><span class="mi">2</span><span class="p">,</span><span class="s">&quot;c&quot;</span><span class="p">:</span><span class="ss">null</span><span class="p" data-group-id="9576076037-1">}</span></code></pre><p>Decoding returns the <code class="inline">#test{}</code>:</p><pre><code class="makeup erlang" translate="no"><span class="o">#</span><span class="ss">test</span><span class="p" data-group-id="1976570668-1">{</span><span class="p" data-group-id="1976570668-1">}</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="nc">jsxrecord</span><span class="p">:</span><span class="nf">decode</span><span class="p" data-group-id="1976570668-2">(</span><span class="p">&lt;&lt;</span><span class="s">&quot;{\&quot;_record\&quot;:\&quot;test\&quot;,\&quot;a\&quot;:1,\&quot;b\&quot;:2,\&quot;c\&quot;:null}&quot;</span><span class="p">&gt;&gt;</span><span class="p" data-group-id="1976570668-2">)</span><span class="p">.</span></code></pre><p>Defaults are automatically added for fields missing in the JSON:</p><pre><code class="makeup erlang" translate="no"><span class="o">#</span><span class="ss">test</span><span class="p" data-group-id="2291437459-1">{</span><span class="w"> </span><span class="ss">a</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="mi">1</span><span class="p">,</span><span class="w"> </span><span class="ss">b</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="mi">2</span><span class="p">,</span><span class="w"> </span><span class="ss">c</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="ss">undefined</span><span class="w"> </span><span class="p" data-group-id="2291437459-1">}</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="nc">jsxrecord</span><span class="p">:</span><span class="nf">decode</span><span class="p" data-group-id="2291437459-2">(</span><span class="p">&lt;&lt;</span><span class="s">&quot;{\&quot;_record\&quot;:\&quot;test\&quot;}&quot;</span><span class="p">&gt;&gt;</span><span class="p" data-group-id="2291437459-2">)</span><span class="p">.</span></code></pre><h3 id="encoding-and-decoding-datetime-and-timestamp-tuples" class="section-heading">
+  <a href="#encoding-and-decoding-datetime-and-timestamp-tuples">
+    <i class="ri-link-m" aria-hidden="true"></i>
+    Encoding and decoding datetime and timestamp tuples
+  </a>
+</h3>
+<p>Datetime tuples are assumed to be in UTC, and are converted into an ISO8601 string:</p><pre><code class="makeup erlang" translate="no"><span class="p">&lt;&lt;</span><span class="s">&quot;\&quot;2008-12-10T13:30:00Z\&quot;&quot;</span><span class="p">&gt;&gt;</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="nc">jsxrecord</span><span class="p">:</span><span class="nf">encode</span><span class="p" data-group-id="0573380079-1">(</span><span class="p" data-group-id="0573380079-2">{</span><span class="p" data-group-id="0573380079-3">{</span><span class="mi">2008</span><span class="p">,</span><span class="w"> </span><span class="mi">12</span><span class="p">,</span><span class="w"> </span><span class="mi">10</span><span class="p" data-group-id="0573380079-3">}</span><span class="p">,</span><span class="w"> </span><span class="p" data-group-id="0573380079-4">{</span><span class="mi">13</span><span class="p">,</span><span class="w"> </span><span class="mi">30</span><span class="p">,</span><span class="w"> </span><span class="mi">0</span><span class="p" data-group-id="0573380079-4">}</span><span class="p" data-group-id="0573380079-2">}</span><span class="p" data-group-id="0573380079-1">)</span></code></pre><p>They are converted back into a datetime tuple:</p><pre><code class="makeup erlang" translate="no"><span class="p" data-group-id="1465785073-1">{</span><span class="p" data-group-id="1465785073-2">{</span><span class="mi">2008</span><span class="p">,</span><span class="w"> </span><span class="mi">12</span><span class="p">,</span><span class="w"> </span><span class="mi">10</span><span class="p" data-group-id="1465785073-2">}</span><span class="p">,</span><span class="w"> </span><span class="p" data-group-id="1465785073-3">{</span><span class="mi">13</span><span class="p">,</span><span class="w"> </span><span class="mi">30</span><span class="p">,</span><span class="w"> </span><span class="mi">0</span><span class="p" data-group-id="1465785073-3">}</span><span class="p" data-group-id="1465785073-1">}</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="nc">jsxrecord</span><span class="p">:</span><span class="nf">decode</span><span class="p" data-group-id="1465785073-4">(</span><span class="p">&lt;&lt;</span><span class="s">&quot;\&quot;2008-12-10T13:30:00Z\&quot;&quot;</span><span class="p">&gt;&gt;</span><span class="p" data-group-id="1465785073-4">)</span></code></pre><p>Erlang timestamp tuples are also converted into an ISO8601 string, but with added precision:</p><pre><code class="makeup erlang" translate="no"><span class="p">&lt;&lt;</span><span class="s">&quot;\&quot;2020-06-12T14:00:11.571Z\&quot;&quot;</span><span class="p">&gt;&gt;</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="nc">jsxrecord</span><span class="p">:</span><span class="nf">encode</span><span class="p" data-group-id="3857008127-1">(</span><span class="p" data-group-id="3857008127-2">{</span><span class="mi">1591</span><span class="p">,</span><span class="mi">970411</span><span class="p">,</span><span class="mi">571321</span><span class="p" data-group-id="3857008127-2">}</span><span class="p" data-group-id="3857008127-1">)</span></code></pre><p>A little bit of precision is lost when converting it back to a timestamp tuple:</p><pre><code class="makeup erlang" translate="no"><span class="p" data-group-id="4523172664-1">{</span><span class="mi">1591</span><span class="p">,</span><span class="mi">970411</span><span class="p">,</span><span class="mi">571000</span><span class="p" data-group-id="4523172664-1">}</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="nc">jsxrecord</span><span class="p">:</span><span class="nf">decode</span><span class="p" data-group-id="4523172664-2">(</span><span class="p">&lt;&lt;</span><span class="s">&quot;\&quot;2020-06-12T14:00:11.571Z\&quot;&quot;</span><span class="p">&gt;&gt;</span><span class="p" data-group-id="4523172664-2">)</span></code></pre><h2 id="configuration" class="section-heading">
+  <a href="#configuration">
+    <i class="ri-link-m" aria-hidden="true"></i>
+    Configuration
+  </a>
+</h2>
+<p>Set the application env <code class="inline">jsxrecord.record_modules</code> to a list of modules whose records need to
+be loaded on first use of the encoder or decoder.</p><h2 id="performance" class="section-heading">
+  <a href="#performance">
+    <i class="ri-link-m" aria-hidden="true"></i>
+    Performance
+  </a>
+</h2>
+<p>The input of encode and the output of decode are parsed and expanded.
+This makes the encoder and decoder slower than pure <code class="inline">jsx</code>.
+Though the difference shouldn't be too bad in normal usage.</p>
+<div class="bottom-actions">
+  <div class="bottom-actions-item">
+
+      <a href="api-reference.html" class="bottom-actions-button" rel="prev">
+        <span class="subheader">
+          ← Previous Page
+        </span>
+        <span class="title">
+API Reference
+        </span>
+      </a>
+
+  </div>
+  <div class="bottom-actions-item">
+
+      <a href="license.html" class="bottom-actions-button" rel="next">
+        <span class="subheader">
+          Next Page →
+        </span>
+        <span class="title">
+LICENSE
+        </span>
+      </a>
+
+  </div>
+</div>
+      <footer class="footer">
+        <p>
+
+            <span class="line">
+              <a href="https://hex.pm/packages/jsxrecord/1.3.1+build.33.ref9ae9fdf" class="footer-hex-package">Hex Package</a>
+
+              <a href="https://preview.hex.pm/preview/jsxrecord/1.3.1+build.33.ref9ae9fdf">Hex Preview</a>
+
+                (<a href="https://preview.hex.pm/preview/jsxrecord/1.3.1+build.33.ref9ae9fdf/show/README.md">current file</a>)
+
+            </span>
+
+          <span class="line">
+            <button class="a-main footer-button display-quick-switch" title="Search HexDocs packages">
+              Search HexDocs
+            </button>
+
+              <a href="jsxrecord.epub" title="ePub version">
+                Download ePub version
+              </a>
+
+          </span>
+        </p>
+
+        <p class="built-using">
+          Built using
+          <a href="https://github.com/elixir-lang/ex_doc" title="ExDoc" target="_blank" rel="help noopener" translate="no">ExDoc</a> (v0.30.5) for the
+
+            <a href="https://erlang.org" title="Erlang" target="_blank" translate="no">Erlang programming language</a>
+
+        </p>
+      </footer>
+    </div>
+  </div>
+</section>
+</div>
+
+
+  </body>
+</html>
