@@ -38,7 +38,8 @@ all() ->
         dates,
         times,
         proplist,
-        record_proplist
+        record_proplist,
+        mixed_list
     ].
 
 %%--------------------------------------------------------------------
@@ -93,3 +94,22 @@ record_proplist(_Config) ->
     Json = jsxrecord:encode(Tr),
     Tr = jsxrecord:decode(Json),
     ok.
+
+mixed_list(_Config) ->
+    L = [{n,7},
+         {mean,166347},
+         {min,750},
+         {max,828167},
+         {median,880},
+         {50,880},
+         {75,1143},
+         {90,828167},
+         {95,828167},
+         {99,828167},
+         {999,828167}],
+    JSON = <<"{\"n\":7,\"mean\":166347,\"min\":750,\"max\":828167,\"median\":880,",
+             "\"50\":880,\"75\":1143,\"90\":828167,\"95\":828167,\"99\":828167,",
+             "\"999\":828167}">>,
+    JSON = jsxrecord:encode(L),
+    ok.
+
