@@ -1,8 +1,11 @@
 {"1.2.0",
-[{<<"jsx">>,{pkg,<<"jsx">>,<<"3.1.0">>},0}]}.
+[{<<"euneus">>,{pkg,<<"euneus">>,<<"0.5.1">>},0},
+ {<<"jsx">>,{pkg,<<"jsx">>,<<"3.1.0">>},0}]}.
 [
 {pkg_hash,[
+ {<<"euneus">>, <<"1F3151D77B5188584BF78C8509413F5343538DE551F4954856F2C5B9F55A085B">>},
  {<<"jsx">>, <<"D12516BAA0BB23A59BB35DCCAF02A1BD08243FCBB9EFE24F2D9D056CCFF71268">>}]},
 {pkg_hash_ext,[
+ {<<"euneus">>, <<"63FC3E670D0AF531816E6465871AB9A72C3795ABF822CA79F600229CF73319E0">>},
  {<<"jsx">>, <<"0C5CC8FDC11B53CC25CF65AC6705AD39E54ECC56D1C22E4ADB8F5A53FB9427F3">>}]}
 ].
