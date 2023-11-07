@@ -30,6 +30,7 @@
 ]).
 
 -define(RECORD_TYPE, <<"_type">>).
+-define(IS_PROPLIST_KEY(X), is_binary(X) orelse is_atom(X) orelse is_integer(X)).
 
 -include_lib("kernel/include/logger.hrl").
 
@@ -91,31 +92,8 @@ do_load_records(Modules, CurrRecordDefs) ->
 encode_json(Term) ->
     Options = #{
         nulls => [undefined, null],
-        list_encoder => fun
-            ([{K, _} | _] = Proplist, Opts)
-              when is_binary(K); is_atom(K); is_integer(K) ->
-                Map = proplists:to_map(Proplist),
-                euneus_encoder:encode_map(Map, Opts);
-            (List, Opts) ->
-                euneus_encoder:encode_list(List, Opts)
-        end,
-        unhandled_encoder => fun
-            ({struct, MochiJSON}, Opts) ->
-                Map = mochijson_to_map(MochiJSON),
-                euneus_encoder:encode_map(Map, Opts);
-            (R, _Opts) when is_tuple(R), is_atom(element(1, R)) ->
-                T = atom_to_binary(element(1, R), utf8),
-                case maps:find(T, record_defs()) of
-                    {ok, Def} ->
-                        encode_json(expand_record_1(
-                            Def, 2, R, #{ ?RECORD_TYPE => T }
-                        ));
-                    error ->
-                        euneus_encoder:throw_unsupported_type_error(R)
-                end;
-            (T, _Opts) ->
-                euneus_encoder:throw_unsupported_type_error(T)
-        end,
+        list_encoder => fun encode_list/2,
+        unhandled_encoder => fun encode_tuple/2,
         error_handler => fun jsx_error/3
     },
     case euneus:encode_to_binary(Term, Options) of
@@ -128,31 +106,7 @@ encode_json(Term) ->
 decode_json(<<>>) -> undefined;
 decode_json(B) ->
     Options = #{
-        objects => fun(M1, _Opts) ->
-            case maps:find(?RECORD_TYPE, M1) of
-                {ok, Type} ->
-                    case maps:find(Type, record_defs_int()) of
-                        {ok, Def} ->
-                            Rec = lists:foldl(
-                                fun({F, Default}, Acc) ->
-                                    V1 = case maps:get(F, M1, Default) of
-                                        V when is_map(V), is_list(Default) ->
-                                            make_proplist(V);
-                                        V ->
-                                            V
-                                    end,
-                                    [ V1 | Acc ]
-                                end,
-                                [ binary_to_atom(Type, utf8) ],
-                                Def),
-                            list_to_tuple( lists:reverse(Rec) );
-                        error ->
-                            M1
-                    end;
-                error ->
-                    M1
-            end
-        end
+        objects => fun reconstitute_records/2
     },
     case euneus:decode(B, Options) of
         {ok, Term} ->
@@ -160,6 +114,28 @@ decode_json(B) ->
         {error, Reason} ->
             error(Reason)
     end.
+
+encode_list([{K, _} | _] = Proplist, Opts) when ?IS_PROPLIST_KEY(K) ->
+    Map = proplists:to_map(Proplist),
+    euneus_encoder:encode_map(Map, Opts);
+encode_list(List, Opts) ->
+    euneus_encoder:encode_list(List, Opts).
+
+encode_tuple({struct, MochiJSON}, Opts) ->
+    Map = mochijson_to_map(MochiJSON),
+    euneus_encoder:encode_map(Map, Opts);
+encode_tuple(R, _Opts) when is_tuple(R), is_atom(element(1, R)) ->
+    T = atom_to_binary(element(1, R), utf8),
+    case maps:find(T, record_defs()) of
+        {ok, Def} ->
+            encode_json(expand_record_1(
+                Def, 2, R, #{ ?RECORD_TYPE => T }
+            ));
+        error ->
+            euneus_encoder:throw_unsupported_type_error(R)
+    end;
+encode_tuple(T, _Opts) ->
+    euneus_encoder:throw_unsupported_type_error(T).
 
 jsx_error(throw, {{token, Token}, Rest, Opts, Input, Pos, Buffer}, _Stacktrace) ->
     ?LOG_ERROR(#{
@@ -173,6 +149,31 @@ jsx_error(throw, {{token, Token}, Rest, Opts, Input, Pos, Buffer}, _Stacktrace) 
     euneus_decoder:resume(Token, Replacement, Rest, Opts, Input, Pos, Buffer);
 jsx_error(Class, Reason, Stacktrace) ->
     euneus_decoder:handle_error(Class, Reason, Stacktrace).
+
+reconstitute_records(M1, _Opts) ->
+    case maps:find(?RECORD_TYPE, M1) of
+        {ok, Type} ->
+            case maps:find(Type, record_defs_int()) of
+                {ok, Def} ->
+                    Rec = lists:foldl(
+                        fun({F, Default}, Acc) ->
+                            V1 = case maps:get(F, M1, Default) of
+                                V when is_map(V), is_list(Default) ->
+                                    make_proplist(V);
+                                V ->
+                                    V
+                            end,
+                            [ V1 | Acc ]
+                        end,
+                        [ binary_to_atom(Type, utf8) ],
+                        Def),
+                    list_to_tuple( lists:reverse(Rec) );
+                error ->
+                    M1
+            end;
+        error ->
+            M1
+    end.
 
 make_proplist(Map) ->
     L = maps:to_list(Map),
