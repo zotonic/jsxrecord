@@ -1,6 +1,6 @@
 %% @author Marc Worrell <marc@worrell.nl>
 %% @copyright 2018-2023 Marc Worrell
-%% @doc JSON with records and 'undefined'/'null' mapping. Wrapper around jsx.
+%% @doc JSON with records and 'undefined'/'null' mapping.
 %% @end
 
 %% Copyright 2018-2023 Marc Worrell
@@ -30,9 +30,7 @@
 ]).
 
 -define(RECORD_TYPE, <<"_type">>).
-
--define(IS_NUMBER(C), C >= $0, C =< $9).
-
+-define(IS_PROPLIST_KEY(X), is_binary(X) orelse is_atom(X) orelse is_integer(X)).
 
 -include_lib("kernel/include/logger.hrl").
 
@@ -91,41 +89,68 @@ do_load_records(Modules, CurrRecordDefs) ->
         Records),
     compile_module(New).
 
-
-encode_json(undefined) -> <<"null">>;
-encode_json(null) -> <<"null">>;
-encode_json(true) -> <<"true">>;
-encode_json(false) -> <<"false">>;
-encode_json({struct, _} = MochiJSON) ->
-    encode_json( mochijson_to_map(MochiJSON) );
 encode_json(Term) ->
-    Options = [
-        {error_handler, fun jsx_error/3}
-    ],
-    jsx:encode(expand_records(Term), Options).
+    Options = #{
+        nulls => [undefined, null],
+        list_encoder => fun encode_list/2,
+        unhandled_encoder => fun encode_tuple/2,
+        error_handler => fun jsx_error/3
+    },
+    case euneus:encode_to_binary(Term, Options) of
+        {ok, JSON} ->
+            JSON;
+        {error, Reason} ->
+            error(Reason)
+    end.
 
 decode_json(<<>>) -> undefined;
-decode_json(<<"null">>) -> undefined;
-decode_json(<<"true">>) -> true;
-decode_json(<<"false">>) -> false;
-decode_json(B) -> reconstitute_records( jsx:decode(B, [return_maps]) ).
+decode_json(B) ->
+    Options = #{
+        objects => fun reconstitute_records/2
+    },
+    case euneus:decode(B, Options) of
+        {ok, Term} ->
+            Term;
+        {error, Reason} ->
+            error(Reason)
+    end.
 
-jsx_error([T|Terms], {parser, State, Handler, Stack}, Config) ->
+encode_list([{K, _} | _] = Proplist, Opts) when ?IS_PROPLIST_KEY(K) ->
+    Map = proplists:to_map(Proplist),
+    euneus_encoder:encode_map(Map, Opts);
+encode_list(List, Opts) ->
+    euneus_encoder:encode_list(List, Opts).
+
+encode_tuple({struct, MochiJSON}, Opts) ->
+    Map = mochijson_to_map(MochiJSON),
+    euneus_encoder:encode_map(Map, Opts);
+encode_tuple(R, _Opts) when is_tuple(R), is_atom(element(1, R)) ->
+    T = atom_to_binary(element(1, R), utf8),
+    case maps:find(T, record_defs()) of
+        {ok, Def} ->
+            encode_json(expand_record_1(
+                Def, 2, R, #{ ?RECORD_TYPE => T }
+            ));
+        error ->
+            euneus_encoder:throw_unsupported_type_error(R)
+    end;
+encode_tuple(T, _Opts) ->
+    euneus_encoder:throw_unsupported_type_error(T).
+
+jsx_error(throw, {{token, Token}, Rest, Opts, Input, Pos, Buffer}, _Stacktrace) ->
     ?LOG_ERROR(#{
         in => jsxrecord,
         text => <<"Error mapping value to JSON">>,
         result => error,
         reason => json_token,
-        token => T
+        token => Token
     }),
-    Config1 = jsx_config:parse_config(Config),
-    jsx_parser:resume([null|Terms], State, Handler, Stack, Config1);
-jsx_error(_Terms, _Error, _Config) ->
-    erlang:error(badarg).
+    Replacement = null,
+    euneus_decoder:resume(Token, Replacement, Rest, Opts, Input, Pos, Buffer);
+jsx_error(Class, Reason, Stacktrace) ->
+    euneus_decoder:handle_error(Class, Reason, Stacktrace).
 
-
-reconstitute_records( M ) when is_map(M) ->
-    M1 = maps:map( fun(_K, V) -> reconstitute_records(V) end, M ),
+reconstitute_records(M1, _Opts) ->
     case maps:find(?RECORD_TYPE, M1) of
         {ok, Type} ->
             case maps:find(Type, record_defs_int()) of
@@ -148,36 +173,7 @@ reconstitute_records( M ) when is_map(M) ->
             end;
         error ->
             M1
-    end;
-reconstitute_records( L ) when is_list(L) ->
-    [ reconstitute_records(X) || X <- L ];
-reconstitute_records( null ) ->
-    undefined;
-reconstitute_records( <<Y4, Y3, Y2, Y1, $-, M2, M1, $-, D2, D1, $T, H2, H1, $:, Min2, Min1, $:, S2, S1, $., Mil3, Mil2, Mil1, $Z>> )
-  when ?IS_NUMBER(Y4), ?IS_NUMBER(Y3), ?IS_NUMBER(Y2), ?IS_NUMBER(Y1),
-       ?IS_NUMBER(M2), ?IS_NUMBER(M1),
-       ?IS_NUMBER(D2), ?IS_NUMBER(D1),
-       ?IS_NUMBER(H2), ?IS_NUMBER(H1),
-       ?IS_NUMBER(Min2), ?IS_NUMBER(Min1),
-       ?IS_NUMBER(S2), ?IS_NUMBER(S1),
-       ?IS_NUMBER(Mil3), ?IS_NUMBER(Mil2), ?IS_NUMBER(Mil1) ->
-    DateTime = {{chars_to_integer(Y4, Y3, Y2, Y1), chars_to_integer(M2, M1), chars_to_integer(D2, D1)},
-                {chars_to_integer(H2, H1), chars_to_integer(Min2, Min1), chars_to_integer(S2, S1)}},
-    MilliSeconds = chars_to_integer(Mil3, Mil2, Mil1),
-    Seconds = calendar:datetime_to_gregorian_seconds(DateTime) - 62167219200,
-    %% 62167219200 == calendar:datetime_to_gregorian_seconds({{1970, 1, 1}, {0, 0, 0}})
-    {Seconds div 1000000, Seconds rem 1000000, MilliSeconds * 1000};
-reconstitute_records( <<Y4, Y3, Y2, Y1, $-, M2, M1, $-, D2, D1, $T, H2, H1, $:, Min2, Min1, $:, S2, S1, $Z>> )
-  when ?IS_NUMBER(Y4), ?IS_NUMBER(Y3), ?IS_NUMBER(Y2), ?IS_NUMBER(Y1),
-       ?IS_NUMBER(M2), ?IS_NUMBER(M1),
-       ?IS_NUMBER(D2), ?IS_NUMBER(D1),
-       ?IS_NUMBER(H2), ?IS_NUMBER(H1),
-       ?IS_NUMBER(Min2), ?IS_NUMBER(Min1),
-       ?IS_NUMBER(S2), ?IS_NUMBER(S1) ->
-    {{chars_to_integer(Y4, Y3, Y2, Y1), chars_to_integer(M2, M1), chars_to_integer(D2, D1)},
-     {chars_to_integer(H2, H1), chars_to_integer(Min2, Min1), chars_to_integer(S2, S1)}};
-reconstitute_records( T ) ->
-    T.
+    end.
 
 make_proplist(Map) ->
     L = maps:to_list(Map),
@@ -194,55 +190,11 @@ make_proplist(Map) ->
         end,
         L).
 
-expand_records(R) when is_tuple(R), is_atom(element(1, R)) ->
-    T = atom_to_binary(element(1, R), utf8),
-    case maps:find(T, record_defs()) of
-        {ok, Def} ->
-            expand_record_1(Def, 2, R, #{ ?RECORD_TYPE => T });
-        error ->
-            R
-    end;
-expand_records({MegaSecs, Secs, MicroSecs}=Timestamp) when is_integer(MegaSecs) andalso is_integer(Secs) andalso is_integer(MicroSecs) ->
-    % Timestamp, map to date in UTC
-    MilliSecs = MicroSecs div 1000,
-    {{Year, Month, Day}, {Hour, Min, Sec}} = calendar:now_to_datetime(Timestamp),
-    unicode:characters_to_binary(io_lib:format("~4.10.0B-~2.10.0B-~2.10.0BT~2.10.0B:~2.10.0B:~2.10.0B.~3.10.0BZ",
-                                               [Year, Month, Day, Hour, Min, Sec, MilliSecs]));
-
-expand_records({{Year,Month,Day},{Hour,Minute,Second}}) when is_integer(Year) andalso is_integer(Month) andalso is_integer(Second) andalso
-                                           is_integer(Hour) andalso is_integer(Minute) andalso is_integer(Second) ->
-    % Date tuple, assume it to be in UTC
-    unicode:characters_to_binary(io_lib:format(
-                                   "~4.10.0B-~2.10.0B-~2.10.0BT~2.10.0B:~2.10.0B:~2.10.0BZ",
-                                   [Year, Month, Day, Hour, Minute, Second]));
-
-expand_records({A, B, Params} = Mime) when is_binary(A), is_binary(B), is_list(Params) ->
-    % Assume to be a MIME content type
-    format_content_type(Mime);
-expand_records({K, V}) when is_number(K) ->
-    [ K, V ];
-expand_records({K, V}) ->
-    {expand_records(K), expand_records(V)};
-expand_records(L) when is_list(L) ->
-    lists:map(
-        fun
-            ({K, V}) when is_binary(K); is_atom(K); is_number(K) -> {K, expand_records(V)};
-            (V) -> expand_records(V)
-        end,
-        L);
-expand_records(M) when is_map(M) ->
-    maps:map( fun(_K, V) -> expand_records(V) end, M );
-expand_records(undefined) ->
-    null;
-expand_records(X) ->
-    X.
-
 expand_record_1([ {F, _} | Fs ], N, R, Acc) ->
-    Acc1 = Acc#{ F => expand_records( element(N, R) ) },
+    Acc1 = Acc#{ F => element(N, R) },
     expand_record_1(Fs, N+1, R, Acc1);
 expand_record_1([], _N, _R, Acc) ->
     Acc.
-
 
 mochijson_to_map({struct, L}) ->
     maps:from_list([ mochijson_to_map(V) || V <- L ]);
@@ -250,12 +202,6 @@ mochijson_to_map({K, V}) ->
     {K, mochijson_to_map(V)};
 mochijson_to_map(V) ->
     V.
-
-format_content_type({T1, T2, []}) ->
-    <<T1/binary, $/, T2/binary>>;
-format_content_type({T1, T2, Params}) ->
-    ParamsBin = [ [$;, Param, $=, Value] || {Param,Value} <- Params ],
-    iolist_to_binary([T1, $/, T2, ParamsBin]).
 
 %% @doc Compile the record defs to a module, for effictient caching of all definitions
 -spec compile_module( map() ) -> ok.
@@ -316,13 +262,3 @@ to_field_name({record_field, _Line, {atom, _, FieldName}}) ->
     {FieldName, undefined};
 to_field_name({record_field, _Line, {atom, _, FieldName}, InitExpr}) ->
     {FieldName, erl_syntax:concrete(InitExpr)}.
-
-chars_to_integer(N2, N1) ->
-    ((N2 - $0) * 10) + (N1 - $0).
-
-chars_to_integer(N3, N2, N1) ->
-    ((N3 - $0) * 100) + ((N2 - $0) * 10) + (N1 - $0).
-
-chars_to_integer(N4, N3, N2, N1) ->
-    ((N4 - $0) * 1000) + ((N3 - $0) * 100) + ((N2 - $0) * 10) + (N1 - $0).
-

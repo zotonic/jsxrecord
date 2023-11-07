@@ -47,52 +47,52 @@ all() ->
 %%--------------------------------------------------------------------
 
 undefined_value(_Config) ->
-    <<"{\"a\":null}">> = jsxrecord:encode( #{ a => undefined } ),
-    #{ <<"a">> := undefined } = jsxrecord:decode( <<"{\"a\":null}">> ),
+    <<"{\"a\":null}">> = encode( #{ a => undefined } ),
+    #{ <<"a">> := undefined } = decode( <<"{\"a\":null}">> ),
     ok.
 
 records(_Config) ->
     ok = jsxrecord:load_records(?MODULE),
-    #test{} = jsxrecord:decode( jsxrecord:encode( #test{} ) ),
-    #test{ a = <<"a">> } = jsxrecord:decode( jsxrecord:encode( #test{ a = a } ) ),
-    #test{ a = undefined } = jsxrecord:decode( jsxrecord:encode( #test{ a = undefined } ) ),
+    #test{} = decode( encode( #test{} ) ),
+    #test{ a = <<"a">> } = decode( encode( #test{ a = a } ) ),
+    #test{ a = undefined } = decode( encode( #test{ a = undefined } ) ),
     ok.
 
 records_nested(_Config) ->
-    #test{ a = #test{} } = jsxrecord:decode( jsxrecord:encode( #test{ a = #test{} } ) ),
-    <<"{\"a\":{\"_type\":\"test\",\"a\":1,\"b\":2,\"c\":null}}">> = jsxrecord:encode(#{ a => #test{} }),
-    #{ <<"a">> := #test{} } = jsxrecord:decode( jsxrecord:encode(#{ a => #test{} }) ),
+    #test{ a = #test{} } = decode( encode( #test{ a = #test{} } ) ),
+    <<"{\"a\":{\"_type\":\"test\",\"a\":1,\"b\":2,\"c\":null}}">> = encode(#{ a => #test{} }),
+    #{ <<"a">> := #test{} } = decode( encode(#{ a => #test{} }) ),
     ok.
 
 record_defaults(_Config) ->
-    #test{ a = 1, b = 2, c = undefined } = jsxrecord:decode( <<"{\"_type\":\"test\"}">> ),
+    #test{ a = 1, b = 2, c = undefined } = decode( <<"{\"_type\":\"test\"}">> ),
     ok.
 
 dates(_Config) ->
-    <<"\"2008-12-10T13:30:00Z\"">> = jsxrecord:encode({{2008, 12, 10}, {13, 30, 0}}),
-    {{2008, 12, 10}, {13, 30, 0}} = jsxrecord:decode(<<"\"2008-12-10T13:30:00Z\"">>),
+    <<"\"2008-12-10T13:30:00Z\"">> = encode({{2008, 12, 10}, {13, 30, 0}}),
+    {{2008, 12, 10}, {13, 30, 0}} = decode(<<"\"2008-12-10T13:30:00Z\"">>),
 
     <<"[\"2008-12-10T13:30:00Z\",\"2008-12-10T13:30:00Z\"]">> =
-        jsxrecord:encode([{{2008, 12, 10}, {13, 30, 0}}, {{2008, 12, 10}, {13, 30, 0}}]),
+        encode([{{2008, 12, 10}, {13, 30, 0}}, {{2008, 12, 10}, {13, 30, 0}}]),
     [{{2008, 12, 10}, {13, 30, 0}}, {{2008, 12, 10}, {13, 30, 0}}] =
-        jsxrecord:decode(<<"[\"2008-12-10T13:30:00Z\",\"2008-12-10T13:30:00Z\"]">>),
+        decode(<<"[\"2008-12-10T13:30:00Z\",\"2008-12-10T13:30:00Z\"]">>),
 
     ok.
 
 times(_Config) ->
-    <<"\"2020-06-12T14:00:11.571Z\"">> = jsxrecord:encode({1591,970411,571321}),
+    <<"\"2020-06-12T14:00:11.571Z\"">> = encode({1591,970411,571321}),
     % We loose a little bit of precision, but that is ok.
-    {1591,970411,571000} = jsxrecord:decode( <<"\"2020-06-12T14:00:11.571Z\"">> ),
+    {1591,970411,571000} = decode( <<"\"2020-06-12T14:00:11.571Z\"">> ),
     ok.
 
 proplist(_Config) ->
-    <<"{\"a\":1}">> = jsxrecord:encode([ {a, 1} ]),
+    <<"{\"a\":1}">> = encode([ {a, 1} ]),
     ok.
 
 record_proplist(_Config) ->
     Tr = #trans{ tr = [ {en, <<"hello">>} ]},
-    Json = jsxrecord:encode(Tr),
-    Tr = jsxrecord:decode(Json),
+    Json = encode(Tr),
+    Tr = decode(Json),
     ok.
 
 mixed_list(_Config) ->
@@ -107,9 +107,29 @@ mixed_list(_Config) ->
          {95,828167},
          {99,828167},
          {999,828167}],
-    JSON = <<"{\"n\":7,\"mean\":166347,\"min\":750,\"max\":828167,\"median\":880,",
-             "\"50\":880,\"75\":1143,\"90\":828167,\"95\":828167,\"99\":828167,",
-             "\"999\":828167}">>,
-    JSON = jsxrecord:encode(L),
+    E = [
+        "\"n\":7",
+        "\"mean\":166347",
+        "\"min\":750",
+        "\"max\":828167",
+        "\"median\":880",
+        "\"50\":880",
+        "\"75\":1143",
+        "\"90\":828167",
+        "\"95\":828167",
+        "\"99\":828167",
+        "\"999\":828167"
+    ],
+    JSON = encode(L),
+    [ match = re:run(JSON, RE, [{capture, none}]) || RE <- E ],
     ok.
 
+%%--------------------------------------------------------------------
+%% SUPPORT FUNCTIONS
+%%--------------------------------------------------------------------
+
+encode(Source) ->
+    jsxrecord:encode(Source).
+
+decode(Bin) ->
+    jsxrecord:decode(Bin).
