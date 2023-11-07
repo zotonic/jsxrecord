@@ -32,9 +32,3 @@ edoc: $(REBAR)
 	  -eval '{ok, saved_to_file} = httpc:request(get, {"$(REBAR_URL)", []}, [], [{stream, "./rebar3"}])' \
 	  -s init stop
 	chmod +x ./rebar3
-
-bench.encode:
-	cd jsxrecord_bench && mix encode
-
-bench.decode:
-	cd jsxrecord_bench && mix decode
