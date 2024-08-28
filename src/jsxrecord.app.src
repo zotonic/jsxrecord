@@ -1,5 +1,5 @@
 {application, jsxrecord, [
-    {description, "JSX wrapper to handle records and 'undefined'"},
+    {description, "JSON encoder wrapper to handle records and 'undefined'"},
     {vsn, "git"},
     {registered, []},
     {applications, [ kernel, stdlib, syntax_tools, compiler ]},
