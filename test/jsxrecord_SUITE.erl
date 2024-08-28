@@ -39,7 +39,8 @@ all() ->
         times,
         proplist,
         record_proplist,
-        mixed_list
+        mixed_list,
+        unknown_term
     ].
 
 %%--------------------------------------------------------------------
@@ -60,7 +61,15 @@ records(_Config) ->
 
 records_nested(_Config) ->
     #test{ a = #test{} } = decode( encode( #test{ a = #test{} } ) ),
-    <<"{\"a\":{\"_type\":\"test\",\"a\":1,\"b\":2,\"c\":null}}">> = encode(#{ a => #test{} }),
+    JSON = encode(#{ a => #test{} }),
+    #{
+        <<"a">> := #{
+            <<"_type">> := <<"test">>,
+            <<"a">> := 1,
+            <<"b">> := 2,
+            <<"c">> := null
+        }
+    } = json:decode(JSON),
     #{ <<"a">> := #test{} } = decode( encode(#{ a => #test{} }) ),
     ok.
 
@@ -123,6 +132,11 @@ mixed_list(_Config) ->
     JSON = encode(L),
     [ match = re:run(JSON, RE, [{capture, none}]) || RE <- E ],
     ok.
+
+unknown_term(_Config) ->
+    <<"null">> = encode(self()),
+    <<"null">> = encode(make_ref()),
+    <<"[null,1,null]">> = encode([ make_ref(), 1, self() ]).
 
 %%--------------------------------------------------------------------
 %% SUPPORT FUNCTIONS

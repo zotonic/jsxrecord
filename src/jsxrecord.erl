@@ -1,9 +1,9 @@
 %% @author Marc Worrell <marc@worrell.nl>
-%% @copyright 2018-2023 Marc Worrell
+%% @copyright 2018-2024 Marc Worrell
 %% @doc JSON with records and 'undefined'/'null' mapping.
 %% @end
 
-%% Copyright 2018-2023 Marc Worrell
+%% Copyright 2018-2024 Marc Worrell
 %%
 %% Licensed under the Apache License, Version 2.0 (the "License");
 %% you may not use this file except in compliance with the License.
@@ -40,7 +40,7 @@
 
 -spec encode( term() ) -> binary().
 encode(Source) ->
-    encode_json(Source).
+    iolist_to_binary(encode_json(Source)).
 
 -spec decode( binary() | undefined ) -> term().
 decode(undefined) ->
@@ -91,29 +91,27 @@ do_load_records(Modules, CurrRecordDefs) ->
 
 encode_json(Term) ->
     Options = #{
+        codecs => [ timestamp, datetime ],
         nulls => [undefined, null],
-        list_encoder => fun encode_list/2,
-        unhandled_encoder => fun encode_tuple/2,
-        error_handler => fun jsx_error/3
+        skip_values => [],
+        proplists => true,
+        encode_list => fun encode_list/2,
+        encode_tuple => fun encode_tuple/2,
+        encode_pid => fun encode_unknown/2,
+        encode_port => fun encode_unknown/2,
+        encode_reference => fun encode_unknown/2,
+        encode_term => fun encode_unknown/2
     },
-    case euneus:encode_to_binary(Term, Options) of
-        {ok, JSON} ->
-            JSON;
-        {error, Reason} ->
-            error(Reason)
-    end.
+    euneus:encode_to_iodata(Term, Options).
 
 decode_json(<<>>) -> undefined;
 decode_json(B) ->
     Options = #{
-        objects => fun reconstitute_records/2
+        codecs => [ timestamp, datetime ],
+        null => undefined,
+        object_finish => fun reconstitute_records/2
     },
-    case euneus:decode(B, Options) of
-        {ok, Term} ->
-            Term;
-        {error, Reason} ->
-            error(Reason)
-    end.
+    euneus:decode(B, Options).
 
 encode_list([{K, _} | _] = Proplist, Opts) when ?IS_PROPLIST_KEY(K) ->
     Map = proplists:to_map(Proplist),
@@ -132,48 +130,54 @@ encode_tuple(R, _Opts) when is_tuple(R), is_atom(element(1, R)) ->
                 Def, 2, R, #{ ?RECORD_TYPE => T }
             ));
         error ->
-            euneus_encoder:throw_unsupported_type_error(R)
+            encode_json(#{
+                ?RECORD_TYPE => <<"_tuple">>,
+                <<"_list">> => tuple_to_list(R)
+            })
     end;
 encode_tuple(T, _Opts) ->
-    euneus_encoder:throw_unsupported_type_error(T).
+    encode_json(#{
+        ?RECORD_TYPE => <<"_tuple">>,
+        <<"_list">> => tuple_to_list(T)
+    }).
 
-jsx_error(throw, {{token, Token}, Rest, Opts, Input, Pos, Buffer}, _Stacktrace) ->
-    ?LOG_ERROR(#{
+encode_unknown(Term, _State) ->
+    ?LOG_WARNING(#{
         in => jsxrecord,
-        text => <<"Error mapping value to JSON">>,
+        text => <<"Error mapping value to JSON - replaced with 'null'">>,
         result => error,
         reason => json_token,
-        token => Token
+        token => Term
     }),
-    Replacement = null,
-    euneus_decoder:resume(Token, Replacement, Rest, Opts, Input, Pos, Buffer);
-jsx_error(Class, Reason, Stacktrace) ->
-    euneus_decoder:handle_error(Class, Reason, Stacktrace).
+    <<"null">>.
 
-reconstitute_records(M1, _Opts) ->
-    case maps:find(?RECORD_TYPE, M1) of
-        {ok, Type} ->
+reconstitute_records(Acc, OldAcc) ->
+    MaybeRecord = case maps:from_list(Acc) of
+        #{ ?RECORD_TYPE := <<"_tuple">>, <<"_list">> := Elts } ->
+            list_to_tuple(Elts);
+        #{ ?RECORD_TYPE := Type } = Map ->
             case maps:find(Type, record_defs_int()) of
                 {ok, Def} ->
                     Rec = lists:foldl(
-                        fun({F, Default}, Acc) ->
-                            V1 = case maps:get(F, M1, Default) of
+                        fun({F, Default}, RecAcc) ->
+                            V1 = case maps:get(F, Map, Default) of
                                 V when is_map(V), is_list(Default) ->
                                     make_proplist(V);
                                 V ->
                                     V
                             end,
-                            [ V1 | Acc ]
+                            [ V1 | RecAcc ]
                         end,
                         [ binary_to_atom(Type, utf8) ],
                         Def),
                     list_to_tuple( lists:reverse(Rec) );
                 error ->
-                    M1
+                    Map
             end;
-        error ->
-            M1
-    end.
+        Map ->
+            Map
+    end,
+    {MaybeRecord, OldAcc}.
 
 make_proplist(Map) ->
     L = maps:to_list(Map),
