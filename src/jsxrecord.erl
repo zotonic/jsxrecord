@@ -96,8 +96,11 @@ encode_json(Term) ->
         skip_values => [],
         proplists => true,
         encode_list => fun encode_list/2,
-        encode_tuple => fun encode_tuple/2
-        % error_handler => fun jsx_error/3
+        encode_tuple => fun encode_tuple/2,
+        encode_pid => fun encode_unknown/2,
+        encode_port => fun encode_unknown/2,
+        encode_reference => fun encode_unknown/2,
+        encode_term => fun encode_unknown/2
     },
     euneus:encode_to_iodata(Term, Options).
 
@@ -138,18 +141,15 @@ encode_tuple(T, _Opts) ->
         <<"_list">> => tuple_to_list(T)
     }).
 
-% jsx_error(throw, {{token, Token}, Rest, Opts, Input, Pos, Buffer}, _Stacktrace) ->
-%     ?LOG_ERROR(#{
-%         in => jsxrecord,
-%         text => <<"Error mapping value to JSON">>,
-%         result => error,
-%         reason => json_token,
-%         token => Token
-%     }),
-%     Replacement = null,
-%     euneus_decoder:resume(Token, Replacement, Rest, Opts, Input, Pos, Buffer);
-% jsx_error(Class, Reason, Stacktrace) ->
-%     euneus_decoder:handle_error(Class, Reason, Stacktrace).
+encode_unknown(Term, _State) ->
+    ?LOG_WARNING(#{
+        in => jsxrecord,
+        text => <<"Error mapping value to JSON - replaced with 'null'">>,
+        result => error,
+        reason => json_token,
+        token => Term
+    }),
+    <<"null">>.
 
 reconstitute_records(Acc, OldAcc) ->
     MaybeRecord = case maps:from_list(Acc) of

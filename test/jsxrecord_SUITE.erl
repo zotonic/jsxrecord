@@ -39,7 +39,8 @@ all() ->
         times,
         proplist,
         record_proplist,
-        mixed_list
+        mixed_list,
+        unknown_term
     ].
 
 %%--------------------------------------------------------------------
@@ -131,6 +132,11 @@ mixed_list(_Config) ->
     JSON = encode(L),
     [ match = re:run(JSON, RE, [{capture, none}]) || RE <- E ],
     ok.
+
+unknown_term(_Config) ->
+    <<"null">> = encode(self()),
+    <<"null">> = encode(make_ref()),
+    <<"[null,1,null]">> = encode([ make_ref(), 1, self() ]).
 
 %%--------------------------------------------------------------------
 %% SUPPORT FUNCTIONS
