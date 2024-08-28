@@ -60,7 +60,15 @@ records(_Config) ->
 
 records_nested(_Config) ->
     #test{ a = #test{} } = decode( encode( #test{ a = #test{} } ) ),
-    <<"{\"a\":{\"_type\":\"test\",\"a\":1,\"b\":2,\"c\":null}}">> = encode(#{ a => #test{} }),
+    JSON = encode(#{ a => #test{} }),
+    #{
+        <<"a">> := #{
+            <<"_type">> := <<"test">>,
+            <<"a">> := 1,
+            <<"b">> := 2,
+            <<"c">> := null
+        }
+    } = json:decode(JSON),
     #{ <<"a">> := #test{} } = decode( encode(#{ a => #test{} }) ),
     ok.
 
