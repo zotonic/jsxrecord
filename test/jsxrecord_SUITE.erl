@@ -38,6 +38,7 @@ all() ->
         dates,
         times,
         proplist,
+        atom_list,
         record_proplist,
         mixed_list,
         unknown_term
@@ -96,6 +97,10 @@ times(_Config) ->
 
 proplist(_Config) ->
     <<"{\"a\":1}">> = encode([ {a, 1} ]),
+    ok.
+
+atom_list(_Config) ->
+    <<"[\"a\",\"b\"]">> = encode([ a, b ]),
     ok.
 
 record_proplist(_Config) ->
