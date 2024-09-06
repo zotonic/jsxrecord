@@ -117,7 +117,13 @@ encode_list([{K, _} | _] = Proplist, Opts) when ?IS_PROPLIST_KEY(K) ->
     Map = proplists:to_map(Proplist),
     euneus_encoder:encode_map(Map, Opts);
 encode_list(List, Opts) ->
-    euneus_encoder:encode_list(List, Opts).
+    case lists:all(fun is_atom/1, List) of
+        true ->
+            List1 = [ atom_to_binary(A, utf8) || A <- List ],
+            euneus_encoder:encode_list(List1, Opts);
+        false ->
+            euneus_encoder:encode_list(List, Opts)
+    end.
 
 encode_tuple({struct, MochiJSON}, Opts) ->
     Map = mochijson_to_map(MochiJSON),
