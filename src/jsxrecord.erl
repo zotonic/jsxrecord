@@ -94,8 +94,8 @@ encode_json(Term) ->
         codecs => [ timestamp, datetime ],
         nulls => [undefined, null],
         skip_values => [],
-        proplists => true,
-        encode_list => fun encode_list/2,
+        key_to_binary => fun key_to_binary/1,
+        proplists => {true, fun is_proplist/1},
         encode_tuple => fun encode_tuple/2,
         encode_pid => fun encode_unknown/2,
         encode_port => fun encode_unknown/2,
@@ -113,17 +113,17 @@ decode_json(B) ->
     },
     euneus:decode(B, Options).
 
-encode_list([{K, _} | _] = Proplist, Opts) when ?IS_PROPLIST_KEY(K) ->
-    Map = proplists:to_map(Proplist),
-    euneus_encoder:encode_map(Map, Opts);
-encode_list(List, Opts) ->
-    case lists:all(fun is_atom/1, List) of
-        true ->
-            List1 = [ atom_to_binary(A, utf8) || A <- List ],
-            euneus_encoder:encode_list(List1, Opts);
-        false ->
-            euneus_encoder:encode_list(List, Opts)
-    end.
+key_to_binary(Bin) when is_binary(Bin) ->
+    Bin;
+key_to_binary(Atom) when is_atom(Atom) ->
+    atom_to_binary(Atom, utf8);
+key_to_binary(Int) when is_integer(Int) ->
+    integer_to_binary(Int, 10).
+
+is_proplist([{K, _} | _]) when ?IS_PROPLIST_KEY(K) ->
+    true;
+is_proplist(_List) ->
+    false.
 
 encode_tuple({struct, MochiJSON}, Opts) ->
     Map = mochijson_to_map(MochiJSON),
