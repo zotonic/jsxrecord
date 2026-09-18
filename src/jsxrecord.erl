@@ -24,6 +24,7 @@
 -export([
     encode/1,
     decode/1,
+    decode/2,
 
     load_records/1,
     record_defs/0
@@ -46,7 +47,20 @@ encode(Source) ->
 decode(undefined) ->
     undefined;
 decode(Bin) when is_binary(Bin) ->
-    decode_json(Bin).
+    decode(Bin, #{}).
+
+%% @doc Decode JSON with optional control over automatic conversions.
+%% Defaults preserve decode/1 behavior. Use codecs => [], records => false,
+%% null => null to retain JSON strings, objects and null values unchanged.
+-spec decode(binary() | undefined, #{
+    codecs => [timestamp | datetime],
+    records => boolean(),
+    null => term()
+}) -> term().
+decode(undefined, Options) when is_map(Options) ->
+    undefined;
+decode(Bin, Options) when is_binary(Bin), is_map(Options) ->
+    decode_json(Bin, Options).
 
 %% @doc Load all record definitions.
 -spec record_defs() -> map().
@@ -104,14 +118,17 @@ encode_json(Term) ->
     },
     euneus:encode_to_iodata(Term, Options).
 
-decode_json(<<>>) -> undefined;
-decode_json(B) ->
-    Options = #{
-        codecs => [ timestamp, datetime ],
-        null => undefined,
-        object_finish => fun reconstitute_records/2
+decode_json(<<>>, _Options) -> undefined;
+decode_json(B, Options) ->
+    DecodeOptions = #{
+        codecs => maps:get(codecs, Options, [timestamp, datetime]),
+        null => maps:get(null, Options, undefined)
     },
-    euneus:decode(B, Options).
+    RecordOptions = case maps:get(records, Options, true) of
+        true -> DecodeOptions#{object_finish => fun reconstitute_records/2};
+        false -> DecodeOptions
+    end,
+    euneus:decode(B, RecordOptions).
 
 key_to_binary(Bin) when is_binary(Bin) ->
     Bin;

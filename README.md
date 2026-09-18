@@ -77,6 +77,22 @@ A little bit of precision is lost when converting it back to a timestamp tuple:
     {1591,970411,571000} = jsxrecord:decode(<<"\"2020-06-12T14:00:11.571Z\"">>)
 
 
+### Preserving ordinary JSON values
+
+`decode/2` accepts an options map. Existing `decode/1` behavior is unchanged:
+
+```erlang
+jsxrecord:decode(Json, #{codecs => [], records => false, null => null}).
+```
+
+This keeps date/time strings as binaries, `_type` objects as maps, and JSON null
+as the atom `null`. Conversion is disabled inside nested objects and arrays too;
+the document is decoded once without a subsequent conversion pass.
+
+The independent options default to `codecs => [timestamp, datetime]`,
+`records => true`, and `null => undefined`. Empty input and `undefined` still
+return `undefined`.
+
 ## Configuration
 
 Set the application env `jsxrecord.record_modules` to a list of modules whose records need to
