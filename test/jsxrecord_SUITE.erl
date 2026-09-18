@@ -32,6 +32,7 @@ end_per_testcase(_TestCase, _Config) ->
 all() ->
     [
         undefined_value,
+        decode_options,
         records,
         records_nested,
         record_defaults,
@@ -51,6 +52,21 @@ all() ->
 undefined_value(_Config) ->
     <<"{\"a\":null}">> = encode( #{ a => undefined } ),
     #{ <<"a">> := undefined } = decode( <<"{\"a\":null}">> ),
+    ok.
+
+decode_options(_Config) ->
+    ok = jsxrecord:load_records(?MODULE),
+    Plain = #{codecs => [], records => false, null => null},
+    Json = <<"{\"date\":\"2008-12-10T13:30:00Z\",\"values\":[null,{\"_type\":\"test\"},{\"_type\":\"_tuple\",\"_list\":[1,2]}]}">>,
+    #{<<"date">> := <<"2008-12-10T13:30:00Z">>,
+      <<"values">> := [null, #{<<"_type">> := <<"test">>},
+          #{<<"_type">> := <<"_tuple">>, <<"_list">> := [1,2]}]} = jsxrecord:decode(Json, Plain),
+    #{<<"date">> := {{2008,12,10},{13,30,0}},
+      <<"values">> := [undefined, #test{}, {1,2}]} = jsxrecord:decode(Json, #{}),
+    #test{} = jsxrecord:decode(<<"{\"_type\":\"test\"}">>, #{codecs => []}),
+    null = jsxrecord:decode(<<"null">>, #{null => null}),
+    undefined = jsxrecord:decode(undefined, Plain),
+    undefined = jsxrecord:decode(<<>>, Plain),
     ok.
 
 records(_Config) ->
