@@ -41,6 +41,8 @@ all() ->
         proplist,
         atom_list,
         record_proplist,
+        record_lists,
+        heterogeneous_lists,
         mixed_list,
         unknown_term
     ].
@@ -123,6 +125,37 @@ record_proplist(_Config) ->
     Tr = #trans{ tr = [ {en, <<"hello">>} ]},
     Json = encode(Tr),
     Tr = decode(Json),
+    ok.
+
+%% Two-element records must remain records even at the start of a list.
+record_lists(_Config) ->
+    ok = jsxrecord:load_records(?MODULE),
+    Tr = #trans{tr = [{nl, <<"Hallo">>}]},
+    Caption = #{<<"caption">> => #trans{tr = [{en, <<"Hello">>}]}},
+    lists:foreach(
+        fun(Value) -> Value = decode(encode(Value)) end,
+        [
+            [Tr],
+            [Tr, #trans{}],
+            [Tr, Caption],
+            [Caption, Tr],
+            [{<<"key">>, 1}, Tr],
+            #{<<"blocks">> => [#{<<"items">> => [Tr, Caption]}]}
+        ]),
+    % Binary keys remain available when a property name is also a record name.
+    #{<<"trans">> := 1, <<"test">> := 2, <<"3">> := 3} =
+        decode(encode([{<<"trans">>, 1}, {test, 2}, {3, 3}])),
+    ok.
+
+%% Checking just the first tuple silently discards later non-property values.
+heterogeneous_lists(_Config) ->
+    lists:foreach(
+        fun(Value) -> Value = decode(encode(Value)) end,
+        [
+            [{<<"key">>, 1}, #{<<"caption">> => <<"Hello">>}],
+            [{<<"key">>, 1}, 42],
+            [{<<"key">>, 1}, [1, 2]]
+        ]),
     ok.
 
 mixed_list(_Config) ->

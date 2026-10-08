@@ -137,8 +137,23 @@ key_to_binary(Atom) when is_atom(Atom) ->
 key_to_binary(Int) when is_integer(Int) ->
     integer_to_binary(Int, 10).
 
-is_proplist([{K, _} | _]) when ?IS_PROPLIST_KEY(K) ->
-    true;
+%% Check every element to avoid dropping values from heterogeneous lists.
+%% A registered single-field record is a two-tuple too, but belongs in an array.
+is_proplist([{K, _} | _] = List) when ?IS_PROPLIST_KEY(K) ->
+    Defs = record_defs(),
+    lists:all(
+        fun
+            ({Key, _}) when is_atom(Key) ->
+                case maps:find(atom_to_binary(Key, utf8), Defs) of
+                    {ok, [_Field]} -> false;
+                    _ -> true
+                end;
+            ({Key, _}) when is_binary(Key); is_integer(Key) ->
+                true;
+            (_) ->
+                false
+        end,
+        List);
 is_proplist(_List) ->
     false.
 
