@@ -97,7 +97,10 @@ do_load_records(Modules, CurrRecordDefs) ->
     New = lists:foldl(
         fun({Name, Fs}, Acc) ->
             FsB = [ {atom_to_binary(F, utf8), Init} || {F,Init} <- Fs ],
-            Acc#{ atom_to_binary(Name, utf8) => FsB }
+            Acc#{
+                atom_to_binary(Name, utf8) => FsB,
+                Name => FsB
+            }
         end,
         CurrRecordDefs,
         Records),
@@ -144,7 +147,7 @@ is_proplist([{K, _} | _] = List) when ?IS_PROPLIST_KEY(K) ->
     lists:all(
         fun
             ({Key, _}) when is_atom(Key) ->
-                case maps:find(atom_to_binary(Key, utf8), Defs) of
+                case maps:find(Key, Defs) of
                     {ok, [_Field]} -> false;
                     _ -> true
                 end;
@@ -161,11 +164,12 @@ encode_tuple({struct, MochiJSON}, Opts) ->
     Map = mochijson_to_map(MochiJSON),
     euneus_encoder:encode_map(Map, Opts);
 encode_tuple(R, _Opts) when is_tuple(R), is_atom(element(1, R)) ->
-    T = atom_to_binary(element(1, R), utf8),
+    T = element(1, R),
     case maps:find(T, record_defs()) of
         {ok, Def} ->
+            TB = atom_to_binary(T, utf8),
             encode_json(expand_record_1(
-                Def, 2, R, #{ ?RECORD_TYPE => T }
+                Def, 2, R, #{ ?RECORD_TYPE => TB }
             ));
         error ->
             encode_json(#{
