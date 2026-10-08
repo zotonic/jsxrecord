@@ -97,7 +97,10 @@ do_load_records(Modules, CurrRecordDefs) ->
     New = lists:foldl(
         fun({Name, Fs}, Acc) ->
             FsB = [ {atom_to_binary(F, utf8), Init} || {F,Init} <- Fs ],
-            Acc#{ atom_to_binary(Name, utf8) => FsB }
+            Acc#{
+                atom_to_binary(Name, utf8) => FsB,
+                Name => FsB
+            }
         end,
         CurrRecordDefs,
         Records),
@@ -137,8 +140,23 @@ key_to_binary(Atom) when is_atom(Atom) ->
 key_to_binary(Int) when is_integer(Int) ->
     integer_to_binary(Int, 10).
 
-is_proplist([{K, _} | _]) when ?IS_PROPLIST_KEY(K) ->
-    true;
+%% Check every element to avoid dropping values from heterogeneous lists.
+%% A registered single-field record is a two-tuple too, but belongs in an array.
+is_proplist([{K, _} | _] = List) when ?IS_PROPLIST_KEY(K) ->
+    Defs = record_defs(),
+    lists:all(
+        fun
+            ({Key, _}) when is_atom(Key) ->
+                case maps:find(Key, Defs) of
+                    {ok, [_Field]} -> false;
+                    _ -> true
+                end;
+            ({Key, _}) when is_binary(Key); is_integer(Key) ->
+                true;
+            (_) ->
+                false
+        end,
+        List);
 is_proplist(_List) ->
     false.
 
@@ -146,11 +164,12 @@ encode_tuple({struct, MochiJSON}, Opts) ->
     Map = mochijson_to_map(MochiJSON),
     euneus_encoder:encode_map(Map, Opts);
 encode_tuple(R, _Opts) when is_tuple(R), is_atom(element(1, R)) ->
-    T = atom_to_binary(element(1, R), utf8),
+    T = element(1, R),
     case maps:find(T, record_defs()) of
         {ok, Def} ->
+            TB = atom_to_binary(T, utf8),
             encode_json(expand_record_1(
-                Def, 2, R, #{ ?RECORD_TYPE => T }
+                Def, 2, R, #{ ?RECORD_TYPE => TB }
             ));
         error ->
             encode_json(#{
